@@ -3,566 +3,909 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Hoiana Shore Golf Club - Pro Guide</title>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Oswald:wght@400;600&display=swap" rel="stylesheet">
+    
+    <!-- PWA Setup -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0f172a">
+    <title>VIP 峴港會安五日高爾夫奢華之旅</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+
     <style>
-        :root {
-            --primary-color: #005f73;
-            --secondary-color: #0a9396;
-            --accent-color: #e9d8a6;
-            --text-dark: #264653;
-            --text-light: #ffffff;
-            --bg-light: #f8f9fa;
-            --card-bg: #ffffff;
-            --shadow: 0 4px 12px rgba(0,0,0,0.1);
-            --nav-height: 70px;
+        body { font-family: 'Noto Sans TC', sans-serif; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
+        
+        /* Markers */
+        .custom-div-icon { background: transparent; border: none; }
+        .marker-pin {
+            width: 40px; height: 40px; border-radius: 50% 50% 50% 0;
+            position: absolute; transform: rotate(-45deg);
+            left: 50%; top: 50%; margin: -20px 0 0 -20px;
+            box-shadow: 0 3px 5px rgba(0,0,0,0.3);
+            display: flex; align-items: center; justify-content: center;
+            border: 2px solid white;
+        }
+        .marker-icon-svg {
+            position: absolute; width: 22px; height: 22px; z-index: 10;
+            transform: rotate(45deg); color: white; margin-top: 2px; margin-left: 2px;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            -webkit-tap-highlight-color: transparent;
-            user-select: none; /* Prevent text selection for app-like feel */
-        }
+        /* Time Label & Arrow */
+        .time-label-icon { background: transparent; border: none; }
+        .arrow-on-line { filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3)); }
 
-        body {
-            font-family: 'Noto Sans TC', sans-serif;
-            background-color: var(--bg-light);
-            color: var(--text-dark);
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
+        /* Colors */
+        .bg-golf { background-color: #15803d; } /* Green-700 */
+        .bg-hotel { background-color: #4338ca; } /* Indigo-700 */
+        .bg-food { background-color: #c2410c; } /* Orange-700 */
+        .bg-sight { background-color: #be185d; } /* Pink-700 */
+        .bg-transport { background-color: #1d4ed8; } /* Blue-700 */
 
-        /* --- Top Navigation Bar (Scrollable Holes) --- */
-        header {
-            background-color: var(--primary-color);
-            height: var(--nav-height);
-            display: flex;
-            align-items: center;
-            padding: 0 10px;
-            box-shadow: var(--shadow);
-            z-index: 100;
-            flex-shrink: 0;
+        /* Popup */
+        .leaflet-popup-content-wrapper { border-radius: 12px; padding: 0; overflow: hidden; }
+        .leaflet-popup-content { margin: 0; width: 260px !important; }
+        
+        /* Tooltip - Light Background Dark Text + Red Border */
+        .custom-tooltip {
+            background-color: rgba(255, 255, 255, 0.95); /* Light BG */
+            color: #1e293b; /* Dark Text */
+            border: 2px solid #ef4444; /* Red Border */
+            border-radius: 6px;
+            padding: 4px 8px; font-size: 13px; font-weight: 700;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2);
+            font-family: 'Noto Sans TC', sans-serif; margin-top: -2px;
+            white-space: nowrap;
         }
+        .leaflet-tooltip-bottom:before { border-bottom-color: #ef4444; }
+        .leaflet-tooltip-top:before { border-top-color: #ef4444; }
 
-        .hole-nav-scroller {
-            display: flex;
-            overflow-x: auto;
-            gap: 12px;
-            padding: 0 10px;
-            width: 100%;
-            scrollbar-width: none; /* Firefox */
-            -ms-overflow-style: none; /* IE/Edge */
+        /* Layout */
+        .mobile-view-active { display: flex !important; }
+        .mobile-view-hidden { display: none !important; }
+        @media (min-width: 1024px) {
+            .mobile-view-hidden { display: flex !important; }
+            .desktop-flex { display: flex !important; }
+            #bottomNav { display: none !important; }
         }
         
-        .hole-nav-scroller::-webkit-scrollbar {
-            display: none; /* Chrome/Safari */
-        }
+        /* Custom Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
 
-        .hole-btn {
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.2);
-            color: rgba(255,255,255,0.8);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Oswald', sans-serif;
-            font-size: 1.1rem;
-            font-weight: 600;
-            flex-shrink: 0;
-            border: 2px solid transparent;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
+        /* Image Zoom Cursor */
+        .zoomable-image { cursor: zoom-in; transition: transform 0.2s; }
+        .zoomable-image:hover { transform: scale(1.02); }
 
-        .hole-btn.active {
-            background: var(--accent-color);
-            color: var(--text-dark);
-            border-color: #fff;
-            transform: scale(1.1);
-            box-shadow: 0 0 10px rgba(0,0,0,0.3);
-        }
-
-        /* --- Main Content Area --- */
-        main {
-            flex: 1;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            padding: 10px;
-            padding-bottom: 20px;
-        }
-
-        /* Info Card */
-        .info-card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 12px 15px;
-            box-shadow: var(--shadow);
-            margin-bottom: 12px;
-        }
-
-        .hole-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            margin-bottom: 8px;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 5px;
-        }
-
-        .hole-number-title {
-            font-size: 1.2rem;
-            font-weight: 700;
-            color: var(--primary-color);
-        }
-
-        .hole-par-hcp {
-            font-family: 'Oswald', sans-serif;
-            font-size: 0.9rem;
-            color: #666;
-        }
-
-        .stats-row {
-            display: flex;
-            justify-content: space-around;
-        }
-
-        .stat-box {
-            text-align: center;
-        }
-        
-        .stat-label { font-size: 0.7rem; color: #888; text-transform: uppercase; }
-        .stat-val { font-family: 'Oswald', sans-serif; font-size: 1.2rem; font-weight: 600; }
-        .val-blue { color: var(--primary-color); }
-        .val-red { color: #e76f51; }
-
-        /* --- View Switcher (Tabs) --- */
-        .view-switcher {
-            display: flex;
-            background: #e9ecef;
-            border-radius: 10px;
-            padding: 4px;
-            margin-bottom: 12px;
-        }
-
-        .view-btn {
-            flex: 1;
-            text-align: center;
-            padding: 8px 0;
-            font-size: 0.95rem;
-            font-weight: 500;
-            color: #666;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .view-btn.active {
-            background: var(--primary-color);
+        /* Active Tab Style */
+        .tab-btn.active {
+            background-color: #f59e0b; /* Amber-500 */
             color: white;
+            border-color: #f59e0b;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-
-        /* --- Content Container --- */
-        .content-container {
-            flex: 1;
-            position: relative;
-            background: var(--card-bg);
-            border-radius: 12px;
-            box-shadow: var(--shadow);
-            overflow: hidden;
-            min-height: 300px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* Image View */
-        .image-view {
-            width: 100%;
-            height: 100%;
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #eee;
-            cursor: zoom-in;
-        }
-
-        .image-view img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain; /* Changed from cover to contain so the whole image is visible */
-        }
-
-        .tap-hint {
-            position: absolute;
-            bottom: 10px;
-            right: 10px;
-            background: rgba(0,0,0,0.6);
-            color: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.7rem;
-            pointer-events: none;
-        }
-
-        /* Strategy View */
-        .strategy-view {
-            padding: 20px;
-            overflow-y: auto;
-            display: none;
-            height: 100%;
-        }
-
-        .strategy-text {
-            font-size: 1rem;
-            line-height: 1.7;
-            color: #333;
-            white-space: pre-line;
-        }
-
-        /* --- Full Screen Lightbox --- */
-        #lightbox {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: black;
-            z-index: 1000;
-            display: none;
-            overflow: hidden;
-            touch-action: none; /* Crucial for custom gestures */
-        }
-
-        #lightbox-img-container {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transform-origin: center center;
-        }
-
-        #lightbox-img {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-            transition: transform 0.1s ease-out; /* Smooth updates */
-            will-change: transform;
-        }
-
-        #lightbox-close {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            width: 50px;
-            height: 50px;
-            background: rgba(0, 0, 0, 0.85); /* Dark black background */
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            color: white;
-            cursor: pointer;
-            z-index: 1001;
-            backdrop-filter: blur(4px);
-            border: 2px solid rgba(255,255,255,0.9); /* Strong border for contrast */
-            box-shadow: 0 2px 10px rgba(0,0,0,0.5); /* Shadow for depth */
-        }
-
-        #lightbox-close:active {
-            background: rgba(50, 50, 50, 0.9);
-            transform: scale(0.95);
-        }
-
-        /* Helper to hide/show views */
-        .hidden { display: none !important; }
         
+        /* Fade In Animation */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
     </style>
 </head>
-<body>
+<body class="bg-slate-50 h-screen flex flex-col overflow-hidden text-slate-800">
 
-<header>
-    <div class="hole-nav-scroller" id="nav-scroller">
-        <!-- JS will populate buttons 1-19 -->
-    </div>
-</header>
-
-<main>
-    <div class="info-card">
-        <div class="hole-header">
-            <div class="hole-number-title" id="hole-title">Hole 1</div>
-            <div class="hole-par-hcp">PAR <span id="hole-par">4</span> | HCP <span id="hole-hcp">2</span></div>
-        </div>
-        <div class="stats-row">
-            <div class="stat-box">
-                <div class="stat-label">White Tee</div>
-                <div class="stat-val val-blue" id="hole-dist">462y</div>
-            </div>
-            <div class="stat-box">
-                <div class="stat-label">Green Depth</div>
-                <div class="stat-val val-red" id="hole-depth">44y</div>
-            </div>
+    <!-- Image Modal (Lightbox) -->
+    <div id="imageModal" class="fixed inset-0 z-[9999] bg-black/90 hidden flex items-center justify-center p-4 cursor-zoom-out opacity-0 transition-opacity duration-300" onclick="closeModal()">
+        <div class="relative inline-block max-w-full max-h-full" onclick="event.stopPropagation()">
+            <img id="modalImage" src="" class="max-h-[85vh] max-w-[95vw] rounded-lg shadow-2xl object-contain transform scale-95 transition-transform duration-300">
+            <button class="absolute top-4 right-4 text-white p-2 bg-black/50 rounded-full hover:bg-white/20" onclick="closeModal()">
+                <i data-lucide="x" class="w-8 h-8 stroke-[3px]"></i>
+            </button>
         </div>
     </div>
 
-    <!-- Switcher -->
-    <div class="view-switcher">
-        <div class="view-btn active" onclick="setView('fairway')" id="btn-fairway">球道圖</div>
-        <div class="view-btn" onclick="setView('green')" id="btn-green">果嶺圖</div>
-        <div class="view-btn" onclick="setView('strategy')" id="btn-strategy">攻略</div>
+    <!-- Exit Confirmation Modal -->
+    <div id="exitModal" class="fixed inset-0 z-[10000] bg-black/80 hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-xs transform scale-95 transition-transform duration-300 flex flex-col items-center text-center" onclick="event.stopPropagation()">
+            <div class="w-12 h-12 bg-red-100 text-red-500 rounded-full flex items-center justify-center mb-4">
+                <i data-lucide="log-out" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-lg font-bold text-slate-800 mb-2">確定要離開嗎？</h3>
+            <p class="text-sm text-slate-500 mb-6">您即將退出行程地圖。</p>
+            <div class="flex gap-3 w-full">
+                <button onclick="cancelExit()" class="flex-1 py-2.5 bg-slate-100 text-slate-700 font-bold rounded-lg hover:bg-slate-200 transition-colors">取消</button>
+                <button onclick="confirmExit()" class="flex-1 py-2.5 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition-colors">確認離開</button>
+            </div>
+        </div>
     </div>
 
-    <!-- Content Area -->
-    <div class="content-container">
+    <!-- Header -->
+    <header class="bg-slate-900 text-white p-3 shadow-md flex items-center justify-between z-30 shrink-0 pt-safe-top">
+        <div class="flex items-center gap-3">
+            <div class="p-2 bg-amber-500 rounded-lg shadow-lg">
+                <i data-lucide="plane" class="text-white w-5 h-5"></i>
+            </div>
+            <div>
+                <h1 class="text-base font-bold leading-tight">VIP 峴港高爾夫奢華之旅</h1>
+                <p class="text-[10px] text-slate-400">2026/04/11 - 04/15</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main -->
+    <div class="flex flex-1 relative overflow-hidden desktop-flex">
         
-        <!-- Image View (Fairway/Green) -->
-        <div id="view-image" class="image-view" onclick="openLightbox()">
-            <img id="main-img" src="" alt="Course View">
-            <div class="tap-hint">點擊放大 (Tap to Zoom)</div>
-        </div>
-
-        <!-- Strategy View -->
-        <div id="view-strategy" class="strategy-view">
-            <div class="strategy-text" id="strategy-text"></div>
-        </div>
-
-    </div>
-</main>
-
-<!-- Lightbox Overlay -->
-<div id="lightbox">
-    <div id="lightbox-close" onclick="closeLightbox()">✕</div>
-    <div id="lightbox-img-container">
-        <img id="lightbox-img" src="" alt="Full Screen">
-    </div>
-</div>
-
-<script>
-    // --- Data ---
-    const courseData = [
-    { "hole": 1, "title": "覺醒", "par": 4, "hcp": 2.0, "distance": 462, "depth": 44, "green_image": "https://i.ibb.co/RGT8f4ZJ/Hole-1-green.jpg", "fairway_image": "https://i.ibb.co/mV2K9FjV/Hole-1-fareway.jpg", "strategy": "• 地形特徵: 極具挑戰性的開場長四桿洞，通常迎風。\n詳細攻略:\n• 發球策略: 距離 462 碼，長四桿洞。最佳落點是球道左中側，避開右側灌木。\n• 進攻果嶺: 需長鐵或混種桿。果嶺有偽前緣，不要勉強兩桿上。若開球不佳，佈局果嶺前切桿保 Par 是明智之舉。" },
-    { "hole": 2, "title": "沙丘之躍", "par": 4, "hcp": 11.0, "distance": 371, "depth": 41, "green_image": "https://i.ibb.co/mCZ83t89/Hole-2-green.jpg", "fairway_image": "https://i.ibb.co/gMcgYY2Z/Hole-2-fareway.jpg", "strategy": "• 地形特徵: 巨大球道沙坑群主宰視覺。\n詳細攻略:\n• 激進打法: 飛越左側沙坑群需 Carry 230-240 碼，獎勵是短挖起桿距離。\n• 保守打法: 選擇右側安全區。\n• 進攻果嶺: 右側進攻角度窄，果嶺地勢高，需精準落點。" },
-    { "hole": 3, "title": "滾動的沙浪", "par": 5, "hcp": 7.0, "distance": 538, "depth": 56, "green_image": "https://i.ibb.co/zT4BZHj1/Hole-3-green.jpg", "fairway_image": "https://i.ibb.co/ds208J2c/Hole-3-fareway.jpg", "strategy": "• 地形特徵: 起伏劇烈的五桿洞。\n詳細攻略:\n• 發球: 避開左側「恐龍沙坑」。沿沙坑右緣可獲加速。\n• 第二桿: 果嶺前方開放，適合滾動進攻。避開果嶺前 100 碼交叉沙坑。\n• 果嶺: 較平坦，抓鳥良機。" },
-    { "hole": 4, "title": "聽濤", "par": 4, "hcp": 1.0, "distance": 442, "depth": 50, "green_image": "https://i.ibb.co/wNJnFNzb/Hole-4-green.jpg", "fairway_image": "https://i.ibb.co/dCLGzSx/Hole-4-fareway.jpg", "strategy": "• 地形特徵: 難度係數 1，強側風。\n詳細攻略:\n• 發球: 切中路。實打實的兩桿考驗。\n• 進攻果嶺: 果嶺巨大但周圍沙坑深。若風大，建議落在果嶺前 20 碼滾上去 (Bump-and-Run)。\n• 提示: 保 Bogey 也是好成績。" },
-    { "hole": 5, "title": "強制飛越", "par": 3, "hcp": 5.0, "distance": 174, "depth": 59, "green_image": "https://i.ibb.co/xKLMBZkX/Hole-5-green.jpg", "fairway_image": "https://i.ibb.co/m5FMQvbJ/Hole-5-fareway.jpg", "strategy": "• 地形特徵: 需飛越廢棄沙坑，無前方安全區。\n詳細攻略:\n• 選桿: 174 碼加風勢，可能需 5 或 6 號鐵。\n• 果嶺: 表面褶皺多。瞄準中心是唯一上策，避開邊緣旗位。" },
-    { "hole": 6, "title": "陷阱", "par": 4, "hcp": 4.0, "distance": 386, "depth": 29, "green_image": "https://i.ibb.co/7d15BBDP/Hole-6-green.jpg", "fairway_image": "https://i.ibb.co/B57VkbX2/Hole-6-fareway.jpg", "strategy": "• 地形特徵: 右側突出沙坑是主要障礙。\n詳細攻略:\n• 發球: 右側吸引右曲球。應瞄準左中側，即使路線稍遠也最安全。\n• 進攻果嶺: 前方有兩沙丘守護，開球距離不夠會擋視野。" },
-    { "hole": 7, "title": "沙海", "par": 5, "hcp": 6.0, "distance": 499, "depth": 43, "green_image": "https://i.ibb.co/6j0YFck/Hole-7-green.jpg", "fairway_image": "https://i.ibb.co/w3L8xgL/Hole-7-fareway.jpg", "strategy": "• 地形特徵: 兩側廣闊沙地。\n詳細攻略:\n• 發球: 得分機會。球道寬，但偏離會落入極難救的沙地長草。\n• 第二桿: 果嶺前方開放，歡迎滾動進攻。注意交叉沙坑。" },
-    { "hole": 8, "title": "綠洲", "par": 3, "hcp": 16.0, "distance": 134, "depth": 49, "green_image": "https://i.ibb.co/VpwBb8xb/Hole-8-green.jpg", "fairway_image": "https://i.ibb.co/7dVFP7PL/Hole-8-fareway.jpg", "strategy": "• 地形特徵: 像孤島漂浮在沙海之上的短三桿洞。\n詳細攻略:\n• 選桿: 暴露在強風中，前方沙坑深。\n• 策略: 寧大勿小。打短落沙坑易吞柏忌。打大雖長推但安全。" },
-    { "hole": 9, "title": "幻覺", "par": 4, "hcp": 9.0, "distance": 392, "depth": 58, "green_image": "https://i.ibb.co/7tZhKGQN/Hole-9-green.jpg", "fairway_image": "https://i.ibb.co/nNqpRbhZ/Hole-9-fareway.jpg", "strategy": "• 地形特徵: 果嶺前有欺騙性沙坑。\n詳細攻略:\n• 進攻: 瞄準練習場鐘樓方向。果嶺前沙坑看似緊貼，實有緩衝。相信碼數，直接打足，球通常會落在果嶺中心。" },
-    { "hole": 10, "title": "漁村", "par": 5, "hcp": 13.0, "distance": 562, "depth": 42, "green_image": "https://i.ibb.co/R4Pb2FL2/Hole-10-green.jpg", "fairway_image": "https://i.ibb.co/1tcN3RKR/Hole-10-fareway.jpg", "strategy": "• 地形特徵: 沙丘間蜿蜒，沙坑佈局精美。\n詳細攻略:\n• 發球: 球道寬，鼓勵進攻。\n• 陷阱: 球道扭曲易誤判。請確認紅燈籠位置。果嶺嵌入沙丘壁。" },
-    { "hole": 11, "title": "沙丘", "par": 4, "hcp": 17.0, "distance": 362, "depth": 51, "green_image": "https://i.ibb.co/HppMzXVq/Hole-11-green.jpg", "fairway_image": "https://i.ibb.co/GfcD8vgH/Hole-11-fareway.jpg", "strategy": "• 地形特徵: 被沙子包圍的短四桿洞。\n詳細攻略:\n• 戰略: 距離短，不需一號木。用球道木或長鐵確保上球道，留短挖起桿距離。\n• 果嶺: 起伏劇烈，極難推桿。落點比距離重要。" },
-    { "hole": 12, "title": "桑迪", "par": 3, "hcp": 8.0, "distance": 210, "depth": 53, "green_image": "https://i.ibb.co/PZ83nYYz/Hole-12-green.jpg", "fairway_image": "https://i.ibb.co/WWjCPRm8/Hole-12-fareway.jpg", "strategy": "• 地形特徵: 需飛越廢棄沙坑的長三桿洞。\n詳細攻略:\n• 戰略: 210 碼，考驗長鐵/混種桿。逆風可能需一號木。\n• 打法: 瞄準中心。保 Par 極好，柏忌可接受。勿追逐刁鑽旗位。" },
-    { "hole": 13, "title": "野獸", "par": 4, "hcp": 3.0, "distance": 397, "depth": 44, "green_image": "https://i.ibb.co/0ytgtBmj/Hole-13-green.jpg", "fairway_image": "https://i.ibb.co/My5HtRf6/Hole-13-fareway.jpg", "strategy": "• 地形特徵: 右側或前方可能有水，沙坑多。\n詳細攻略:\n• 發球: 需高精確度。避開兩側廢棄區。長打者可挑戰越過交叉沙坑。\n• 進攻果嶺: 會所建築產生漩渦風。果嶺是碗狀 (Punchbowl)，中間有脊線，可利用護坡喂球。" },
-    { "hole": 14, "title": "遊樂場", "par": 3, "hcp": 18.0, "distance": 119, "depth": 32, "green_image": "https://i.ibb.co/FLSsM6sq/Hole-14-green.jpg", "fairway_image": "https://i.ibb.co/8nxD1PhR/Hole-14-fareway.jpg", "strategy": "• 地形特徵: 最短洞，像沙盒。\n詳細攻略:\n• 策略: 僅 119 碼但沙坑密布，風亂。\n• 技巧: 果嶺右緣有隱藏「踢球坡」，可將球彈向中心。失誤會落入深沙坑。" },
-    { "hole": 15, "title": "燕窩", "par": 4, "hcp": 12.0, "distance": 367, "depth": 49, "green_image": "https://i.ibb.co/6RzMvHxH/Hole-15-green.jpg", "fairway_image": "https://i.ibb.co/39bfm20g/Hole-15-fareway.jpg", "strategy": "• 地形特徵: 果嶺緊鄰海岸，通往大海。\n詳細攻略:\n• 發球: 視野最窄。必須打上右側，左側進攻角度極差且盲打。\n• 進攻果嶺: 側風強。打短是沙，打大是海。建議低飛球 (Punch Shot)。" },
-    { "hole": 16, "title": "簽名洞", "par": 4, "hcp": 14.0, "distance": 346, "depth": 36, "green_image": "https://i.ibb.co/LXLMJVBL/Hole-16-green.jpg", "fairway_image": "https://i.ibb.co/wNL6B1fW/Hole-16-fareway.jpg", "strategy": "• 地形特徵: 沿海灘延伸，無邊際果嶺。\n詳細攻略:\n• 發球: 順風長打者有機會一桿攻果嶺。逆風需兩次紮實擊球。\n• 進攻果嶺: 視覺驚人。瞄準中心安全側，勿挑戰海邊旗位。" },
-    { "hole": 17, "title": "占婆", "par": 3, "hcp": 15.0, "distance": 157, "depth": 41, "green_image": "https://i.ibb.co/jvcJtkx4/Hole-17-green.jpg", "fairway_image": "https://i.ibb.co/fYZx4FGp/Hole-17-fareway.jpg", "strategy": "• 地形特徵: 直面占婆島，強側風。\n詳細攻略:\n• 戰略: 157 碼。無風簡單，海風強勁。\n• 建議: 壓低彈道，利用地面反彈。旗靠海瞄中心；旗在沙丘側可激進。" },
-    { "hole": 18, "title": "蛇的終章", "par": 5, "hcp": 10.0, "distance": 577, "depth": 37, "green_image": "https://i.ibb.co/4ZgDc36p/Hole-18-green.jpg", "fairway_image": "https://i.ibb.co/ycCJGY28/Hole-18-fareway.jpg", "strategy": "• 地形特徵: 逆風回會所，球道蛇形，右側有水。\n詳細攻略:\n• 發球: 避開兩側沙丘和右水。\n• 第二桿: 逆風長距離，極難兩桿上。佈局避開沙坑。\n• 進攻果嶺: 攻向「獅子嘴」沙坑守護的果嶺。英雄式結尾。" },
-    { "hole": 19, "title": "賭徒紅利", "par": 3, "hcp": null, "distance": 94, "depth": 31, "green_image": "https://i.ibb.co/ymsXyTSN/Hole-19-green.jpg", "fairway_image": "https://i.ibb.co/BVyc4pFh/Hole-19-fareway.jpg", "strategy": "• 特徵: 會所旁短三桿洞，解決平局用。近乎島果嶺，充滿樂趣。" }
-    ];
-
-    let currentHoleIndex = 0;
-    let currentView = 'fairway'; // 'fairway', 'green', 'strategy'
-
-    // DOM Elements
-    const navScroller = document.getElementById('nav-scroller');
-    const elTitle = document.getElementById('hole-title');
-    const elPar = document.getElementById('hole-par');
-    const elHcp = document.getElementById('hole-hcp');
-    const elDist = document.getElementById('hole-dist');
-    const elDepth = document.getElementById('hole-depth');
-    const mainImg = document.getElementById('main-img');
-    const strategyText = document.getElementById('strategy-text');
-    const viewImage = document.getElementById('view-image');
-    const viewStrategy = document.getElementById('view-strategy');
-    
-    // Lightbox Elements
-    const lightbox = document.getElementById('lightbox');
-    const lightboxImg = document.getElementById('lightbox-img');
-    const lightboxContainer = document.getElementById('lightbox-img-container');
-
-    // --- Initialization ---
-    function init() {
-        renderNav();
-        loadHole(0);
-    }
-
-    // Render Top Navigation Buttons
-    function renderNav() {
-        navScroller.innerHTML = '';
-        courseData.forEach((hole, index) => {
-            const btn = document.createElement('div');
-            btn.className = 'hole-btn';
-            btn.textContent = hole.hole;
-            btn.onclick = () => loadHole(index);
-            btn.id = `nav-btn-${index}`;
-            navScroller.appendChild(btn);
-        });
-    }
-
-    // Load Specific Hole Data
-    function loadHole(index) {
-        currentHoleIndex = index;
-        const data = courseData[index];
-
-        // Update UI Text
-        elTitle.textContent = `${data.hole}. ${data.title}`;
-        elPar.textContent = data.par;
-        elHcp.textContent = data.hcp ? data.hcp : '-';
-        elDist.textContent = `${data.distance}y`;
-        elDepth.textContent = `${data.depth}y`;
-        strategyText.textContent = data.strategy;
-
-        // Update Nav Active State
-        document.querySelectorAll('.hole-btn').forEach(b => b.classList.remove('active'));
-        const activeBtn = document.getElementById(`nav-btn-${index}`);
-        if(activeBtn) {
-            activeBtn.classList.add('active');
-            activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center' });
-        }
-
-        // Refresh Content based on current view
-        updateContent();
-    }
-
-    // Handle Tab Switching
-    function setView(view) {
-        currentView = view;
-        updateContent();
-    }
-
-    function updateContent() {
-        // Update Buttons Styling
-        document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(`btn-${currentView}`).classList.add('active');
-
-        const data = courseData[currentHoleIndex];
-
-        if (currentView === 'strategy') {
-            viewImage.classList.add('hidden');
-            viewStrategy.classList.remove('hidden');
-            viewStrategy.style.display = 'block';
-        } else {
-            viewStrategy.classList.add('hidden');
-            viewStrategy.style.display = 'none';
-            viewImage.classList.remove('hidden');
+        <!-- List View -->
+        <aside id="listView" class="w-full lg:w-[420px] flex flex-col bg-white h-full border-r border-gray-200 mobile-view-active z-20 transition-all">
             
-            // Set Image Source
-            const src = currentView === 'fairway' ? data.fairway_image : data.green_image;
-            mainImg.src = src;
-        }
-    }
+            <!-- Stacked Navigation Layout -->
+            <div class="shrink-0 bg-slate-50 border-b border-gray-200 z-30 shadow-sm">
+                <!-- Map Overview Button (Full Width) -->
+                <div class="px-3 pt-3 pb-2">
+                     <button onclick="switchDay('all')" id="tab-all" class="w-full tab-btn py-2.5 rounded-lg text-sm font-bold transition-all border bg-white text-slate-600 border-slate-300 hover:bg-slate-100 flex items-center justify-center gap-2 shadow-sm">
+                        <i data-lucide="map" class="w-4 h-4"></i> 📍 地圖總覽 (全行程)
+                     </button>
+                </div>
+                
+                <!-- Day Tabs (Flex Row) -->
+                <div class="flex px-3 pb-3 gap-2" id="dayTabs">
+                    <!-- JS will inject buttons here -->
+                </div>
+            </div>
 
-    // --- Lightbox & Zoom Logic ---
-    let state = {
-        scale: 1,
-        panning: false,
-        pointX: 0,
-        pointY: 0,
-        startX: 0,
-        startY: 0
-    };
+            <!-- Itinerary Content with Touch Logic -->
+            <div id="itineraryContent" class="flex-1 overflow-y-auto p-4 custom-scrollbar bg-white pb-20 lg:pb-4" style="touch-action: pan-y pinch-zoom;"></div>
+        </aside>
 
-    function openLightbox() {
-        if (currentView === 'strategy') return; // Cannot zoom text
-        
-        lightbox.style.display = 'block';
-        // Set High Res Image (Using same for now, but could be higher res)
-        lightboxImg.src = mainImg.src;
-        
-        // Reset Zoom State
-        resetZoom();
-    }
+        <!-- Map View -->
+        <main id="mapView" class="w-full h-full bg-slate-200 relative mobile-view-hidden lg:block flex-1 z-10 transition-all">
+            <div id="map" class="w-full h-full z-0"></div>
+            
+            <!-- Legend Button -->
+            <div class="absolute top-4 right-4 z-[500] flex flex-col items-end">
+                <button id="legendToggle" class="bg-white p-2.5 rounded-lg shadow-lg border border-gray-200 text-slate-600 mb-2 hover:bg-gray-50">
+                    <i data-lucide="info" class="w-5 h-5"></i>
+                </button>
+                <div id="legendContent" class="hidden bg-white/95 backdrop-blur-sm p-4 rounded-lg shadow-xl border border-gray-200 text-xs w-44 animate-fade-in">
+                    <div class="font-bold text-slate-700 mb-2 border-b pb-2">圖例說明</div>
+                    <div class="space-y-2.5">
+                        <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-green-700"></span> 高爾夫球場</div>
+                        <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-indigo-700"></span> 奢華住宿</div>
+                        <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-orange-700"></span> 精緻餐飲</div>
+                        <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-pink-700"></span> 觀光景點</div>
+                        <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-blue-700"></span> 機場/交通</div>
+                        <div class="flex items-center gap-2 mt-1 text-[10px] text-slate-500 pt-1 border-t"><span class="border border-amber-500 text-amber-600 px-1 rounded">25分</span> 預估車程</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
 
-    function closeLightbox() {
-        lightbox.style.display = 'none';
-        resetZoom();
-    }
+    <!-- Mobile Nav -->
+    <nav id="bottomNav" class="lg:hidden bg-white border-t border-gray-200 flex justify-around items-center h-16 shrink-0 z-40 fixed bottom-0 w-full shadow-[0_-4px_10px_rgba(0,0,0,0.05)] pb-safe-bottom">
+        <button id="navBtnList" class="flex flex-col items-center justify-center w-1/2 h-full text-amber-600 transition-colors" onclick="setMobileView('list')">
+            <i data-lucide="list" class="w-5 h-5 mb-1"></i>
+            <span class="text-xs font-bold mt-1">行程列表</span>
+        </button>
+        <button id="navBtnMap" class="flex flex-col items-center justify-center w-1/2 h-full text-slate-400 hover:text-slate-600 transition-colors" onclick="setMobileView('map')">
+            <i data-lucide="map" class="w-5 h-5 mb-1"></i>
+            <span class="text-xs font-bold mt-1">地圖模式</span>
+        </button>
+    </nav>
 
-    function resetZoom() {
-        state = { scale: 1, panning: false, pointX: 0, pointY: 0, startX: 0, startY: 0 };
-        updateTransform();
-    }
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // --- DATA ---
+        const LOCATIONS = {
+            taoyuanAirport: {
+                lat: 25.077467, lng: 121.231975, name: "桃園國際機場 (TPE)", type: "transport",
+                image: "https://www.archi.net.tw/customerpic/10956/prj/prj_10956_202092611212153_2l2.jpg", 
+                website: "https://www.taoyuan-airport.com/"
+            },
+            taoyuanAirportT2: {
+                lat: 25.077200, lng: 121.233500, name: "桃園機場第二航廈", type: "transport",
+                image: "https://www.archi.net.tw/customerpic/10956/prj/prj_10956_202092611212153_2l2.jpg", // T2 Image
+                website: "https://www.taoyuan-airport.com/"
+            },
+            airport: { 
+                lat: 16.054452, lng: 108.202166, name: "峴港國際機場 (DAD)", type: "transport",
+                image: "https://gandan.me/wp-content/uploads/2017/04/20241006-1d18l.jpg", 
+                website: "https://danangairportterminal.vn/"
+            },
+            intercontinental: { 
+                lat: 16.120500, lng: 108.306160, name: "InterContinental Resort", type: "hotel",
+                image: "https://live.staticflickr.com/65535/54842483435_9297b91884_o.jpg", 
+                website: "https://www.danang.intercontinental.com/zh-hant/"
+            },
+            madameLan: { 
+                lat: 16.081581, lng: 108.223346, name: "藍夫人越式餐廳", type: "food",
+                image: "https://farm66.static.flickr.com/65535/53736162838_50dc1dd787_c.jpg", 
+                website: "https://madamelan.vn/en"
+            },
+            laMaison: { 
+                lat: 16.120800, lng: 108.306500, name: "La Maison 1888", type: "food",
+                image: "https://www.veganfoodquest.com/wp-content/uploads/2015/11/InterCon-Danang-%C3%A2%E2%82%AC%E2%80%9C-La-Maison-18881.jpg", 
+                website: "https://www.danang.intercontinental.com/zh-hant/dining/la-maison-1888/"
+            },
+            banaHillsGolf: { 
+                lat: 16.017641, lng: 108.049361, name: "Ba Na Hills Golf Club", type: "golf",
+                image: "https://www.theworldluxurytravelawards.com/wp-content/uploads/sites/13/2023/08/New-Main-scaled.jpg",
+                website: "https://banahillsgolf.com/hole-by-hole/"
+            },
+            myHanh: { 
+                lat: 16.065330, lng: 108.246292, name: "MY HANH 海鮮", type: "food",
+                image: "https://cdn2.ettoday.net/images/8432/d8432457.jpg",
+                website: "https://myhanhseafood.vn/#"
+            },
+            brgGolf: { 
+                lat: 15.974087, lng: 108.277424, name: "BRG Da Nang Golf Resort", type: "golf",
+                image: "https://image.kkday.com/v2/image/get/w_960,c_fit,q_55,wm_auto/s1.kkday.com/product_131376/20220719142609_NIUUg/jpg", 
+                website: "https://brgdananggolf.com/"
+            },
+            hoiAn: { 
+                lat: 15.877108, lng: 108.325970, name: "會安古城 (日本橋)", type: "sight",
+                image: "https://i0.wp.com/jazko.com/wp-content/uploads/2018/04/japanese-bridge-in-hoi-an-vietnam-1600x1600-1280x1280.jpg?resize=696%2C696&ssl=1",
+                website: "https://www.danang.com.tw/info/guideline/50"
+            },
+            limDining: { 
+                lat: 15.876650, lng: 108.328015, name: "LIM DINING", type: "food",
+                image: "https://lh3.googleusercontent.com/places/AKR5kUiw0WHM4aQHwebe4FrT0FxcUFQLhzhxX6SCQ0SfRGbw_IiTtU82BXkOzEBTGfjkCYd4b8OcxXf4APAedHClskTIhER0vP4zTMM=s1600-w640",
+                website: "https://www.limdiningroom.com/about"
+            },
+            newWorld: { 
+                lat: 15.826000, lng: 108.393000, name: "New World Hoiana", type: "hotel",
+                image: "https://du-lich.chudu24.com/f/m/2305/23/new-world-hoiana-beach-resort.jpg?w=800&h=500",
+                website: "https://www.hoiana.com/zh-hant/hotels/new-world-hoiana-beach-resort/"
+            },
+            hoianaGolf: { 
+                lat: 15.824440, lng: 108.405694, name: "Hoiana Shores Golf", type: "golf",
+                image: "https://www.ziontourvn.com/uploads/images/image-20250827102239-1.jpeg",
+                website: "https://www.hoiana.com/zh-hant/golf/home",
+                yardageBook: "https://cdn.prod.website-files.com/68878f00b8a3232197d325a4/68df4ca6f893ec06eebbea9a_Hoiana%20Shores%20Golf%20Club%20-%20Yardage%20book.pdf"
+            },
+            sanXiLou: { 
+                lat: 15.826200, lng: 108.393200, name: "三希樓", type: "food",
+                image: "https://starworldtour.com/wp-content/uploads/2024/07/SanXiLou-4-1.jpg", 
+                website: "https://www.hoiana.com/zh-hant/dining/san-xi-lou"
+            },
+        };
 
-    function updateTransform() {
-        lightboxImg.style.transform = `translate(${state.pointX}px, ${state.pointY}px) scale(${state.scale})`;
-    }
-
-    // Touch Event Handling for Zoom/Pan
-    let initialDistance = 0;
-    let initialScale = 1;
-
-    lightboxContainer.addEventListener('touchstart', (e) => {
-        if (e.touches.length === 2) {
-            // Pinch Start
-            e.preventDefault(); // Prevent default browser zoom
-            initialDistance = getDistance(e.touches);
-            initialScale = state.scale;
-        } else if (e.touches.length === 1) {
-            // Pan Start
-            state.panning = true;
-            state.startX = e.touches[0].clientX - state.pointX;
-            state.startY = e.touches[0].clientY - state.pointY;
-        }
-    }, { passive: false });
-
-    lightboxContainer.addEventListener('touchmove', (e) => {
-        if (e.touches.length === 2) {
-            // Pinch Move
-            e.preventDefault();
-            const currentDistance = getDistance(e.touches);
-            if (initialDistance > 0) {
-                const diff = currentDistance / initialDistance;
-                let newScale = initialScale * diff;
-                // Limit Zoom
-                newScale = Math.max(1, Math.min(newScale, 4));
-                state.scale = newScale;
-                updateTransform();
+        const ITINERARY = [
+            {
+                day: 1,
+                date: "04/11",
+                weather: "⛅ 24°C-30°C 晴時多雲",
+                title: "出發 & 奢華入住",
+                desc: "從台北飛往峴港，享用越式午餐後入住頂級洲際酒店。",
+                route: [
+                    { ...LOCATIONS.taoyuanAirport, time: "09:45", note: "長榮 BR383 飛往峴港" },
+                    { ...LOCATIONS.airport, time: "11:35", note: "抵達峴港 (飛行約 2小時50分)" },
+                    { ...LOCATIONS.madameLan, time: "12:30", note: "午餐: 藍夫人越式餐廳" },
+                    { ...LOCATIONS.intercontinental, time: "15:00", note: "Check-in & 設施體驗" },
+                    { ...LOCATIONS.laMaison, time: "18:00", note: "晚餐: La Maison 1888 (米其林一星)" }
+                ],
+                stay: LOCATIONS.intercontinental
+            },
+            {
+                day: 2,
+                date: "04/12",
+                weather: "☀️ 25°C-31°C 晴朗炎熱",
+                title: "巴拿山高爾夫挑戰",
+                desc: "前往 Ba Na Hills 球場揮桿，晚上享用海鮮大餐。",
+                route: [
+                    { ...LOCATIONS.intercontinental, time: "08:00", note: "飯店自助早餐" },
+                    { ...LOCATIONS.banaHillsGolf, time: "11:00", note: "Ba Na Hills Golf 18 Holes" },
+                    { ...LOCATIONS.myHanh, time: "18:00", note: "晚餐: MY HANH SEAFOOD" },
+                    { ...LOCATIONS.intercontinental, time: "21:00", note: "返回飯店休息" }
+                ],
+                stay: LOCATIONS.intercontinental
+            },
+            {
+                day: 3,
+                date: "04/13",
+                weather: "🌥️ 24°C-29°C 多雲",
+                title: "BRG 高球 & 會安古城",
+                desc: "上午 BRG 球敘，下午探索世界文化遺產會安古城。",
+                route: [
+                    { ...LOCATIONS.intercontinental, time: "07:30", note: "退房出發" },
+                    { ...LOCATIONS.brgGolf, time: "11:00", note: "BRG Da Nang Golf Resort" },
+                    { ...LOCATIONS.hoiAn, time: "16:00", note: "會安古城 (日本橋)" },
+                    { ...LOCATIONS.limDining, time: "18:00", note: "晚餐: LIM DINING" },
+                    { ...LOCATIONS.newWorld, time: "20:30", note: "Check-in: New World Hoiana" }
+                ],
+                stay: LOCATIONS.newWorld
+            },
+            {
+                day: 4,
+                date: "04/14",
+                weather: "🌤️ 25°C-30°C 晴時多雲",
+                title: "Hoiana 海岸高爾夫",
+                desc: "在亞洲百大球場 Hoiana Shores 享受揮桿樂趣。",
+                route: [
+                    { ...LOCATIONS.newWorld, time: "08:00", note: "飯店自助早餐" },
+                    { ...LOCATIONS.hoianaGolf, time: "11:00", note: "Hoiana Shores Golf" },
+                    { ...LOCATIONS.sanXiLou, time: "18:00", note: "晚餐: 三希樓粵式餐廳" }
+                ],
+                stay: LOCATIONS.newWorld
+            },
+            {
+                day: 5,
+                date: "04/15",
+                weather: "☀️ 25°C-31°C 晴朗",
+                title: "返程",
+                desc: "悠閒早餐，登機前4小時退房，返回台北。",
+                route: [
+                    { ...LOCATIONS.newWorld, time: "09:00", note: "退房 & 出發 (BR384)" },
+                    { ...LOCATIONS.airport, time: "10:00", note: "抵達機場 (12:35 起飛)" },
+                    { ...LOCATIONS.taoyuanAirportT2, time: "16:45", note: "抵達桃園機場2航廈 (飛行約 3小時10分)" }
+                ],
+                stay: null
             }
-        } else if (e.touches.length === 1 && state.scale > 1) {
-            // Pan Move (Only allow if zoomed in)
-            e.preventDefault(); 
-            if (state.panning) {
-                state.pointX = e.touches[0].clientX - state.startX;
-                state.pointY = e.touches[0].clientY - state.startY;
-                updateTransform();
+        ];
+
+        // --- APP LOGIC ---
+        let map, markersLayer, polylineLayer, labelsLayer, selectedDayId = 1, currentBounds = [];
+        const routePalette = ['#e11d48', '#d97706', '#059669', '#2563eb', '#7c3aed'];
+        // Remove swipe related variables if not used, or keep if used for other gestures
+        // Removed isExiting as it was part of the swipe logic flow in previous version? No, exit logic is separate.
+        let isExiting = false;
+        // RENDER ID FOR ASYNC MAP UPDATES
+        let currentRenderId = 0;
+
+        // --- CUSTOM ROUTING TIME TABLE (Google Maps Estimates) ---
+        const routeTimes = {
+            "桃園國際機場 (TPE)-峴港國際機場 (DAD)": "2小時50分",
+            "峴港國際機場 (DAD)-藍夫人越式餐廳": "15 分鐘",
+            "藍夫人越式餐廳-InterContinental Resort": "35 分鐘",
+            "InterContinental Resort-La Maison 1888": "步行",
+            "InterContinental Resort-Ba Na Hills Golf Club": "70 分鐘",
+            "Ba Na Hills Golf Club-MY HANH 海鮮": "45 分鐘",
+            "MY HANH 海鮮-InterContinental Resort": "25 分鐘",
+            "InterContinental Resort-BRG Da Nang Golf Resort": "35 分鐘",
+            "BRG Da Nang Golf Resort-會安古城 (日本橋)": "20 分鐘",
+            "會安古城 (日本橋)-LIM DINING": "步行",
+            "LIM DINING-New World Hoiana": "15 分鐘",
+            "New World Hoiana-Hoiana Shores Golf": "5 分鐘",
+            "Hoiana Shores Golf-三希樓": "步行",
+            "New World Hoiana-峴港國際機場 (DAD)": "55 分鐘",
+            "峴港國際機場 (DAD)-桃園機場第二航廈": "3小時10分"
+        };
+
+        // --- ICONS ---
+        const getIconHtml = (type) => {
+            const icons = { golf: 'flag', hotel: 'bed', food: 'utensils', sight: 'camera', transport: 'plane' };
+            const svgs = {
+                flag: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>',
+                bed: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v10"/><path d="M2 17h20"/><path d="M6 8v9"/></svg>',
+                utensils: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>',
+                camera: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>',
+                plane: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"/><path d="M13 2l-8 7h12l5 3"/></svg>'
+            };
+            return svgs[icons[type] || 'map-pin'];
+        };
+
+        const createCustomIcon = (type) => {
+            const colorClass = `bg-${type}`;
+            const svg = getIconHtml(type);
+            return L.divIcon({
+                className: 'custom-div-icon',
+                html: `<div class="marker-pin ${colorClass}"><div class="marker-icon-svg">${svg}</div></div>`,
+                iconSize: [40, 40], iconAnchor: [20, 40], popupAnchor: [0, -38]
+            });
+        };
+
+        // --- MAP FUNCTIONS ---
+        function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+            var R = 6371; var dLat = deg2rad(lat2-lat1); var dLon = deg2rad(lon2-lon1);
+            var a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon/2) * Math.sin(dLon/2);
+            var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); return R * c;
+        }
+        function deg2rad(deg) { return deg * (Math.PI/180) }
+        
+        function getBearing(startLat, startLng, destLat, destLng) {
+            const startLatRad = deg2rad(startLat);
+            const startLngRad = deg2rad(startLng);
+            const destLatRad = deg2rad(destLat);
+            const destLngRad = deg2rad(destLng);
+
+            const y = Math.sin(destLngRad - startLngRad) * Math.cos(destLatRad);
+            const x = Math.cos(startLatRad) * Math.sin(destLatRad) -
+                    Math.sin(startLatRad) * Math.cos(destLatRad) * Math.cos(destLngRad - startLngRad);
+            const brng = Math.atan2(y, x);
+            return (brng * 180 / Math.PI + 360) % 360;
+        }
+
+        function getRouteTime(startName, endName) {
+            const key = `${startName}-${endName}`;
+            if (routeTimes[key]) return routeTimes[key];
+            if ((startName.includes("InterContinental") && endName.includes("La Maison")) ||
+                (endName.includes("InterContinental") && startName.includes("La Maison"))) return "步行";
+            if ((startName.includes("New World") && endName.includes("三希樓")) ||
+                (endName.includes("New World") && startName.includes("三希樓"))) return "步行";
+            return "車程約 20 分"; 
+        }
+
+        async function fetchRouteGeometry(p1, p2) {
+            const url = `https://router.project-osrm.org/route/v1/driving/${p1[1]},${p1[0]};${p2[1]},${p2[0]}?overview=full&geometries=geojson`;
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Network response was not ok');
+                const data = await response.json();
+                if (data.routes && data.routes.length > 0) {
+                    return data.routes[0].geometry.coordinates.map(coord => [coord[1], coord[0]]);
+                }
+            } catch (error) {
+                console.log("OSRM fetch failed, using straight line", error);
+            }
+            return [p1, p2];
+        }
+
+        function initMap() {
+            map = L.map('map', { zoomControl: false }).setView([16.0544, 108.2022], 10);
+            L.control.zoom({ position: 'bottomright' }).addTo(map);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OpenStreetMap', maxZoom: 19
+            }).addTo(map);
+            
+            markersLayer = L.layerGroup().addTo(map);
+            polylineLayer = L.layerGroup().addTo(map);
+            labelsLayer = L.layerGroup().addTo(map);
+
+            renderDayTabs();
+            renderItinerary(1);
+        }
+
+        function renderDayTabs() {
+            const container = document.getElementById('dayTabs');
+            container.innerHTML = ITINERARY.map(item => `
+                <button onclick="switchDay(${item.day})" id="tab-${item.day}"
+                    class="tab-btn flex-1 py-2 rounded-lg text-xs font-bold transition-all border shrink-0 ${item.day === selectedDayId ? 'bg-amber-500 text-white border-amber-500 shadow-md' : 'bg-white text-slate-500 border-gray-300'}"
+                >DAY ${item.day}</button>
+            `).join('');
+        }
+
+        function switchDay(day) {
+            selectedDayId = day;
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                if (btn.id.startsWith('tab-') && btn.id !== 'tab-all') {
+                    btn.className = "tab-btn flex-1 py-2 rounded-lg text-xs font-bold transition-all border shrink-0 bg-white text-slate-500 border-gray-300";
+                }
+            });
+            
+            const btnOverview = document.getElementById('tab-all');
+            if(btnOverview) {
+                if (day === 'all') {
+                    btnOverview.className = "w-full tab-btn py-2.5 rounded-lg text-sm font-bold transition-all border bg-amber-500 text-white border-amber-500 hover:bg-amber-600 flex items-center justify-center gap-2 shadow-md";
+                } else {
+                    btnOverview.className = "w-full tab-btn py-2.5 rounded-lg text-sm font-bold transition-all border bg-white text-slate-600 border-slate-300 hover:bg-slate-100 flex items-center justify-center gap-2 shadow-sm";
+                    const activeBtn = document.getElementById(`tab-${day}`);
+                    if(activeBtn) activeBtn.className = "tab-btn flex-1 py-2 rounded-lg text-xs font-bold transition-all border shrink-0 bg-amber-500 text-white border-amber-500 shadow-md";
+                }
+            }
+            
+            // Scroll to top of itinerary content when switching
+            const contentDiv = document.getElementById('itineraryContent');
+            if (contentDiv) contentDiv.scrollTop = 0;
+
+            if (day === 'all') {
+                renderAllLocations();
+                updateMap('all');
+            } else {
+                renderItinerary(day);
+                updateMap(ITINERARY.find(d => d.day === day));
             }
         }
-    }, { passive: false });
 
-    lightboxContainer.addEventListener('touchend', (e) => {
-        state.panning = false;
-        if (e.touches.length < 2) {
-            initialDistance = 0;
+        function renderAllLocations() {
+             document.getElementById('itineraryContent').innerHTML = `
+                <div class="mb-4 animate-fade-in">
+                    <h2 class="text-xl font-bold text-slate-800 mb-2">🇻🇳 越南行程地圖總覽</h2>
+                    <p class="text-xs text-slate-600 bg-amber-50 p-3 rounded-lg border-l-4 border-amber-400">
+                        此模式顯示本次旅程在越南境內的所有景點、餐廳與球場分佈。點擊地圖圖標可查看詳情。
+                    </p>
+                </div>
+                <div class="grid grid-cols-1 gap-3 pb-20 animate-fade-in">
+                    ${Object.values(LOCATIONS).filter(loc => loc.lat < 20).map(loc => `
+                        <div class="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-100 shadow-sm cursor-pointer hover:bg-slate-50 transition-colors" onclick="zoomToLocation(${loc.lat}, ${loc.lng})">
+                             <div class="relative z-10 w-10 h-10 rounded-full border-2 border-white shadow-sm flex items-center justify-center shrink-0 bg-${loc.type === 'hotel' ? 'hotel' : loc.type === 'golf' ? 'golf' : loc.type === 'food' ? 'food' : loc.type === 'sight' ? 'sight' : 'transport'} text-white">
+                                    ${getIconHtml(loc.type)}
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h4 class="font-bold text-slate-800 text-sm truncate">${loc.name}</h4>
+                                <div class="flex gap-2 mt-1">
+                                    <button class="text-[12px] text-white bg-blue-600 px-2 py-1 rounded-full shadow-sm" onclick="event.stopPropagation(); window.open('https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}')">導航</button>
+                                    ${loc.website ? `<button class="text-[12px] text-white bg-emerald-600 px-2 py-1 rounded-full shadow-sm" onclick="event.stopPropagation(); window.open('${loc.website}')">官網</button>` : ''}
+                                </div>
+                            </div>
+                            <img src="${loc.image}" class="w-12 h-12 rounded object-cover bg-gray-200 shadow-sm" onclick="openModal(this.src); event.stopPropagation();">
+                        </div>
+                    `).join('')}
+                </div>
+             `;
         }
-        // Snap back if scaled less than 1 (safety)
-        if(state.scale < 1) {
-            state.scale = 1;
-            state.pointX = 0;
-            state.pointY = 0;
-            updateTransform();
+
+        window.openModal = function(src) {
+            const modal = document.getElementById('imageModal');
+            const img = document.getElementById('modalImage');
+            img.src = src;
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                img.classList.remove('scale-95');
+                img.classList.add('scale-100');
+            }, 10);
         }
-    });
 
-    function getDistance(touches) {
-        return Math.hypot(
-            touches[0].clientX - touches[1].clientX,
-            touches[0].clientY - touches[1].clientY
-        );
-    }
+        window.closeModal = function() {
+            const modal = document.getElementById('imageModal');
+            const img = document.getElementById('modalImage');
+            modal.classList.add('opacity-0');
+            img.classList.remove('scale-100');
+            img.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
 
-    // Run
-    init();
+        function renderItinerary(day) {
+            const data = ITINERARY.find(d => d.day === day);
+            document.getElementById('itineraryContent').innerHTML = `
+                <div class="mb-4 animate-fade-in">
+                    <div class="flex items-center flex-wrap gap-2 mb-1">
+                        <span class="px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-bold rounded">DAY ${data.day}</span>
+                        <span class="text-slate-400 text-xs font-medium">${data.date}</span>
+                        <span class="text-blue-600 text-xs font-bold border border-blue-200 bg-blue-50 px-2 py-0.5 rounded-full">${data.weather}</span>
+                    </div>
+                    <h2 class="text-lg font-bold text-slate-800 mb-1 leading-tight">${data.title}</h2>
+                    <p class="text-xs text-slate-600 italic border-l-2 border-amber-400 pl-2 bg-amber-50 py-1.5 rounded-r">${data.desc}</p>
+                </div>
+                <div class="relative space-y-4 pl-1 animate-fade-in">
+                    <div class="absolute left-[20px] top-2 bottom-4 w-[2px] bg-slate-200"></div>
+                    ${data.route.map((stop, idx) => {
+                        let connectorHtml = '';
+                        if (idx < data.route.length - 1) {
+                            const nextStop = data.route[idx+1];
+                            const displayTime = getRouteTime(stop.name, nextStop.name);
+                            connectorHtml = `
+                                <div class="flex flex-col items-center flex-1 w-full my-1">
+                                    <div class="w-0.5 h-2 bg-slate-200 shrink-0"></div>
+                                    <span class="bg-white border-2 border-red-500 text-sm text-red-600 font-bold px-2 rounded-full z-10 leading-none py-1 whitespace-nowrap">
+                                        ${displayTime}
+                                    </span>
+                                    <div class="w-0.5 h-full bg-slate-200"></div>
+                                </div>
+                            `;
+                        }
 
-</script>
+                        return `
+                        <div class="relative flex gap-3 group cursor-pointer active:bg-gray-100 p-2 rounded-lg transition-colors border border-transparent hover:border-gray-200" onclick="zoomToLocation(${stop.lat}, ${stop.lng})">
+                            
+                            <div class="flex flex-col items-end pt-1 w-12 shrink-0">
+                                <span class="text-sm font-bold text-slate-700 font-mono leading-none">${stop.time}</span>
+                            </div>
+
+                            <div class="flex flex-col items-center gap-1 w-8 shrink-0">
+                                <div class="relative z-10 w-8 h-8 rounded-full border-2 border-white shadow-sm flex items-center justify-center shrink-0 bg-${stop.type} text-white">
+                                    ${getIconHtml(stop.type)}
+                                </div>
+                                ${connectorHtml}
+                            </div>
+
+                            <div class="flex-1 min-w-0">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <div class="flex items-center gap-2 mb-0.5">
+                                            ${stop.note.includes("班機") || stop.note.includes("退房") ? `<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-600 flex items-center gap-1">⚠️ 重要</span>` : ''}
+                                        </div>
+                                        <h3 class="font-bold text-slate-800 text-sm leading-tight mb-1">${stop.name}</h3>
+                                    </div>
+                                    <img src="${stop.image}" class="w-16 h-12 object-cover rounded-md shadow-sm border border-gray-100 shrink-0 ml-2 bg-gray-100 zoomable-image" loading="lazy" alt="${stop.name}" onerror="this.src='https://via.placeholder.com/150'" onclick="openModal(this.src); event.stopPropagation();">
+                                </div>
+                                <p class="text-[11px] text-slate-500 mt-0.5 line-clamp-2">${stop.note}</p>
+                                <div class="flex gap-2 mt-2">
+                                    <button class="inline-flex items-center text-sm text-white bg-blue-600 px-3 py-1.5 rounded-full shadow-sm active:scale-95 transition-transform" onclick="event.stopPropagation(); window.open('https://www.google.com/maps/search/?api=1&query=${stop.lat},${stop.lng}')">
+                                        <i data-lucide="navigation" class="w-3.5 h-3.5 mr-1"></i> 導航
+                                    </button>
+                                    ${stop.website ? `<button class="inline-flex items-center text-sm text-white bg-emerald-600 px-3 py-1.5 rounded-full shadow-sm active:scale-95 transition-transform" onclick="event.stopPropagation(); window.open('${stop.website}')"><i data-lucide="globe" class="w-3.5 h-3.5 mr-1"></i> 官網</button>` : ''}
+                                    ${stop.yardageBook ? `<button class="inline-flex items-center text-sm text-white bg-orange-600 px-3 py-1.5 rounded-full shadow-sm active:scale-95 transition-transform" onclick="event.stopPropagation(); window.open('${stop.yardageBook}')"><i data-lucide="book-open" class="w-3.5 h-3.5 mr-1"></i> 碼數本</button>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    }).join('')}
+                    ${data.stay ? `
+                    <div class="mt-4 pt-4 border-t border-gray-100 ml-14">
+                        <div class="bg-slate-800 text-white p-3 rounded-xl flex items-center gap-3 shadow-lg">
+                            <div class="p-1.5 bg-white/10 rounded-full"><i data-lucide="bed" class="w-4 h-4"></i></div>
+                            <div>
+                                <div class="text-[9px] text-slate-400 uppercase tracking-widest mb-0.5">本日住宿</div>
+                                <div class="font-bold text-xs">${data.stay.name}</div>
+                            </div>
+                        </div>
+                    </div>` : ''}
+                </div>`;
+            lucide.createIcons();
+            
+            // Re-attach swipe because DOM changed
+            attachSwipeListeners();
+            updateMap(data);
+        }
+
+        async function updateMap(dayData) {
+            // Async guard check: increment render ID
+            const renderId = ++currentRenderId;
+            
+            markersLayer.clearLayers(); polylineLayer.clearLayers(); labelsLayer.clearLayers();
+            const latLngs = [];
+            const fitBoundsLatLngs = []; 
+
+            if (dayData === 'all') {
+                // Overview Mode
+                Object.values(LOCATIONS).forEach(loc => {
+                    if (loc.lat < 20) { // Filter out Taiwan
+                        L.marker([loc.lat, loc.lng], { icon: createCustomIcon(loc.type) })
+                            .bindPopup(`
+                                <div class="font-sans w-[240px]">
+                                    <img src="${loc.image}" class="w-full h-32 object-cover rounded-t-lg mb-2 zoomable-image" alt="${loc.name}" onerror="this.src='https://via.placeholder.com/150'" onclick="openModal(this.src)">
+                                    <div class="px-2 pb-2">
+                                        <h3 class="font-bold text-sm mb-2 text-slate-800">${loc.name}</h3>
+                                        <div class="flex gap-2">
+                                            <a href="https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}" target="_blank" class="flex-1 text-center bg-blue-600 text-white text-sm font-bold py-2 rounded shadow hover:bg-blue-700 transition-colors">導航</a>
+                                            ${loc.website ? `<a href="${loc.website}" target="_blank" class="flex-1 text-center bg-emerald-600 text-white text-sm font-bold py-2 rounded shadow hover:bg-emerald-700 transition-colors">官網</a>` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                            `).bindTooltip(loc.name, { 
+                                permanent: true, 
+                                direction: 'top', 
+                                offset: [0, -40], 
+                                className: 'custom-tooltip' 
+                            })
+                            .addTo(markersLayer);
+                        fitBoundsLatLngs.push([loc.lat, loc.lng]);
+                    }
+                });
+                currentBounds = fitBoundsLatLngs;
+            } else {
+                // Single Day Mode
+                dayData.route.forEach(stop => {
+                    const latLng = [stop.lat, stop.lng];
+                    latLngs.push(latLng);
+                    if (stop.lat < 20) fitBoundsLatLngs.push(latLng);
+
+                    const tooltipDir = stop.type === 'hotel' ? 'top' : 'bottom';
+                    const tooltipOff = stop.type === 'hotel' ? [0, -40] : [0, 5];
+
+                    const isDay1AndNewWorld = dayData.day === 1 && stop.name.includes("New World"); 
+                    const isDay2AndNewWorld = dayData.day === 2 && stop.name === LOCATIONS.newWorld.name; 
+                    const isDay4AndInterCon = dayData.day === 4 && stop.name === LOCATIONS.intercontinental.name; 
+
+                    L.marker(latLng, { icon: createCustomIcon(stop.type) })
+                        .bindPopup(`
+                            <div class="font-sans w-[240px]">
+                                <img src="${stop.image}" class="w-full h-32 object-cover rounded-t-lg mb-2 zoomable-image" alt="${stop.name}" onerror="this.src='https://via.placeholder.com/150'" onclick="openModal(this.src)">
+                                <div class="px-2 pb-2">
+                                    <div class="text-[10px] font-bold text-slate-500 mb-1">${stop.time}</div>
+                                    <h3 class="font-bold text-sm mb-2 text-slate-800">${stop.name}</h3>
+                                    <div class="flex gap-2 flex-wrap">
+                                        <a href="https://www.google.com/maps/search/?api=1&query=${stop.lat},${stop.lng}" target="_blank" class="flex-1 text-center bg-blue-600 text-white text-sm font-bold py-2 rounded shadow hover:bg-blue-700 transition-colors">導航</a>
+                                        ${stop.website ? `<a href="${stop.website}" target="_blank" class="flex-1 text-center bg-emerald-600 text-white text-sm font-bold py-2 rounded shadow hover:bg-emerald-700 transition-colors">官網</a>` : ''}
+                                        ${stop.yardageBook ? `<a href="${stop.yardageBook}" target="_blank" class="flex-1 text-center bg-orange-600 text-white text-sm font-bold py-2 rounded shadow hover:bg-orange-700 transition-colors">碼數本</a>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `).bindTooltip(stop.name, { 
+                            permanent: true, 
+                            direction: tooltipDir, 
+                            offset: tooltipOff, 
+                            className: 'custom-tooltip' 
+                        })
+                        .addTo(markersLayer);
+                });
+
+                for (let i = 0; i < latLngs.length - 1; i++) {
+                    const p1 = latLngs[i];
+                    const p2 = latLngs[i+1];
+                    const color = routePalette[i % routePalette.length];
+                    const stop1 = dayData.route[i];
+                    const stop2 = dayData.route[i+1];
+                    const displayTime = getRouteTime(stop1.name, stop2.name);
+                    const isFlight = displayTime.includes('飛行') || displayTime.includes('小時');
+                    
+                    let routePoints = [p1, p2];
+                    if (!isFlight) {
+                        routePoints = await fetchRouteGeometry(p1, p2);
+                        // Guard against stale async renders
+                        if (renderId !== currentRenderId) return;
+                    }
+
+                    L.polyline(routePoints, { 
+                        color: color, 
+                        weight: 4, 
+                        opacity: 0.8, 
+                        dashArray: isFlight ? '8, 12' : null 
+                    }).addTo(polylineLayer);
+
+                    const mid = [(p1[0] + p2[0])/2, (p1[1] + p2[1])/2];
+                    const bearing = getBearing(p1[0], p1[1], p2[0], p2[1]);
+                    
+                    const labelIcon = L.divIcon({
+                        className: 'time-label-icon',
+                        html: `
+                            <div class="relative flex items-center justify-center w-24 h-8" style="transform: translate(-50%, -50%);">
+                                <div style="position: absolute; transform: translate(-50%, -50%) rotate(${bearing}deg);">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="${color}" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="arrow-on-line">
+                                        <polygon points="12 2 22 22 12 18 2 22 12 2"></polygon>
+                                    </svg>
+                                </div>
+                                <div class="bg-white/95 border border-${color} text-slate-700 time-badge font-bold rounded-full shadow-sm whitespace-nowrap mt-6" style="border-color: ${color};">
+                                    ${displayTime}
+                                </div>
+                            </div>
+                        `,
+                        iconSize: [0, 0], 
+                        iconAnchor: [0, 0]
+                    });
+                    L.marker(mid, { icon: labelIcon, zIndexOffset: 1000 }).addTo(labelsLayer);
+                }
+
+                [LOCATIONS.intercontinental, LOCATIONS.newWorld].forEach(h => {
+                    const inRoute = dayData.route.some(r => r.name === h.name);
+                    const isDay1AndNewWorld = dayData.day === 1 && h.name === LOCATIONS.newWorld.name;
+                    const isDay2AndNewWorld = dayData.day === 2 && h.name === LOCATIONS.newWorld.name;
+                    const isDay4AndInterCon = dayData.day === 4 && h.name === LOCATIONS.intercontinental.name;
+
+                    if (!inRoute && !isDay1AndNewWorld && !isDay2AndNewWorld && !isDay4AndInterCon) {
+                        L.marker([h.lat, h.lng], { icon: createCustomIcon('hotel'), opacity: 0.5 })
+                            .addTo(markersLayer)
+                            .bindTooltip(h.name, { 
+                                permanent: true, 
+                                direction: 'top', 
+                                offset: [0, -40], 
+                                className: 'custom-tooltip opacity-75' 
+                            });
+                        if (h.lat < 20) fitBoundsLatLngs.push([h.lat, h.lng]);
+                    }
+                });
+
+                currentBounds = fitBoundsLatLngs.length > 0 ? fitBoundsLatLngs : latLngs;
+            }
+
+            if(window.innerWidth >= 1024 || document.getElementById('mapView').classList.contains('mobile-view-active')) {
+                if(currentBounds.length > 0) map.fitBounds(currentBounds, { padding: [50, 50], maxZoom: 14 });
+            }
+        }
+
+        function setMobileView(view) {
+            const list = document.getElementById('listView');
+            const mapDiv = document.getElementById('mapView');
+            const btnList = document.getElementById('navBtnList');
+            const btnMap = document.getElementById('navBtnMap');
+
+            if (view === 'list') {
+                list.className = "w-full lg:w-[420px] flex flex-col bg-white h-full border-r border-gray-200 mobile-view-active z-20";
+                mapDiv.className = "w-full h-full bg-slate-200 relative mobile-view-hidden lg:block flex-1 z-10";
+                btnList.className = "flex flex-col items-center justify-center w-1/2 h-full text-amber-600 transition-colors";
+                btnMap.className = "flex flex-col items-center justify-center w-1/2 h-full text-slate-400 hover:text-slate-600 transition-colors";
+            } else {
+                list.className = "w-full lg:w-[420px] flex flex-col bg-white h-full border-r border-gray-200 mobile-view-hidden lg:flex z-20";
+                mapDiv.className = "w-full h-full bg-slate-200 relative mobile-view-active lg:block flex-1 z-10";
+                btnList.className = "flex flex-col items-center justify-center w-1/2 h-full text-slate-400 hover:text-slate-600 transition-colors";
+                btnMap.className = "flex flex-col items-center justify-center w-1/2 h-full text-blue-600 transition-colors";
+                setTimeout(() => { 
+                    map.invalidateSize(); 
+                    if(currentBounds.length) map.fitBounds(currentBounds, {padding:[50,50], maxZoom:14}); 
+                }, 100);
+            }
+        }
+
+        function zoomToLocation(lat, lng) {
+            if (window.innerWidth < 1024) {
+                setMobileView('map');
+            }
+            setTimeout(() => map.flyTo([lat, lng], 16, { duration: 1.5 }), 150);
+        }
+
+        document.getElementById('legendToggle').addEventListener('click', () => {
+            document.getElementById('legendContent').classList.toggle('hidden');
+        });
+
+        // Exit Logic
+        window.addEventListener('load', function() {
+            window.history.pushState({ app: true }, "", "");
+        });
+        window.addEventListener('popstate', function(event) {
+            if (isExiting) return; 
+            showExitModal();
+        });
+
+        function showExitModal() {
+            const modal = document.getElementById('exitModal');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modal.querySelector('div').classList.remove('scale-95');
+                modal.querySelector('div').classList.add('scale-100');
+            }, 10);
+        }
+
+        function cancelExit() {
+            window.history.pushState({ app: true }, "", "");
+            const modal = document.getElementById('exitModal');
+            modal.classList.add('opacity-0');
+            modal.querySelector('div').classList.remove('scale-100');
+            modal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        }
+
+        function confirmExit() {
+            isExiting = true;
+            const modal = document.getElementById('exitModal');
+            modal.classList.add('opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+            
+            try {
+                window.history.back(); 
+                window.close(); 
+            } catch (e) {
+                console.log("Exit failed");
+            }
+        }
+
+        // Touch Swipe Logic
+        function attachSwipeListeners() {
+            let touchstartX = 0;
+            let touchendX = 0;
+            let touchstartY = 0;
+            let touchendY = 0;
+
+            const contentDiv = document.getElementById('itineraryContent');
+            if(!contentDiv) return;
+
+            contentDiv.addEventListener('touchstart', e => {
+                touchstartX = e.changedTouches[0].screenX;
+                touchstartY = e.changedTouches[0].screenY;
+            });
+
+            contentDiv.addEventListener('touchend', e => {
+                touchendX = e.changedTouches[0].screenX;
+                touchendY = e.changedTouches[0].screenY;
+                handleSwipe();
+            });
+
+            function handleSwipe() {
+                const xDiff = touchendX - touchstartX;
+                const yDiff = touchendY - touchstartY;
+
+                // Check if horizontal swipe is dominant and long enough (>50px)
+                if (Math.abs(xDiff) > Math.abs(yDiff) && Math.abs(xDiff) > 50) {
+                    if (xDiff < 0) {
+                        // Swipe Left -> Next Day (if not on 'all' or last day)
+                        if (selectedDayId !== 'all' && selectedDayId < 5) switchDay(selectedDayId + 1);
+                    } else {
+                        // Swipe Right -> Prev Day (if not on 'all' or first day)
+                        if (selectedDayId !== 'all') {
+                            if(selectedDayId > 1) switchDay(selectedDayId - 1);
+                            // Removed 'all' transition
+                        }
+                    }
+                }
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initMap();
+            lucide.createIcons();
+            if (window.innerWidth < 1024) setMobileView('list');
+            attachSwipeListeners();
+        });
+    </script>
 </body>
 </html>
