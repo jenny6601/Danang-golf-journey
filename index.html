@@ -2,23 +2,44 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     
-    <!-- PWA Setup -->
+    <!-- PWA Settings -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#0f172a">
+    <meta name="application-name" content="VIP峴港高爾夫">
+    <meta name="apple-mobile-web-app-title" content="VIP峴港高爾夫">
+    
+    <!-- App Icon (Golf Ball) -->
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/109/109964.png">
+    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/109/109964.png">
+
     <title>VIP 峴港會安五日高爾夫奢華之旅</title>
     
+    <!-- Libraries -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
-        body { font-family: 'Noto Sans TC', sans-serif; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
+        body { 
+            font-family: 'Noto Sans TC', sans-serif; 
+            -webkit-tap-highlight-color: transparent; 
+            overscroll-behavior-y: none;
+            /* Prevent pull-to-refresh on mobile */
+            touch-action: pan-x pan-y;
+            user-select: none;
+            -webkit-user-select: none;
+        }
         
+        /* Custom Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+
         /* Markers */
         .custom-div-icon { background: transparent; border: none; }
         .marker-pin {
@@ -34,26 +55,20 @@
             transform: rotate(45deg); color: white; margin-top: 2px; margin-left: 2px;
         }
 
-        /* Time Label & Arrow */
-        .time-label-icon { background: transparent; border: none; }
-        .arrow-on-line { filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3)); }
-
         /* Colors */
-        .bg-golf { background-color: #15803d; } /* Green-700 */
-        .bg-hotel { background-color: #4338ca; } /* Indigo-700 */
-        .bg-food { background-color: #c2410c; } /* Orange-700 */
-        .bg-sight { background-color: #be185d; } /* Pink-700 */
-        .bg-transport { background-color: #1d4ed8; } /* Blue-700 */
+        .bg-golf { background-color: #15803d; } 
+        .bg-hotel { background-color: #4338ca; } 
+        .bg-food { background-color: #c2410c; } 
+        .bg-sight { background-color: #be185d; } 
+        .bg-transport { background-color: #1d4ed8; } 
 
-        /* Popup */
+        /* Popup & Tooltip */
         .leaflet-popup-content-wrapper { border-radius: 12px; padding: 0; overflow: hidden; }
         .leaflet-popup-content { margin: 0; width: 260px !important; }
-        
-        /* Tooltip - Light Background Dark Text + Red Border */
         .custom-tooltip {
-            background-color: rgba(255, 255, 255, 0.95); /* Light BG */
-            color: #1e293b; /* Dark Text */
-            border: 2px solid #ef4444; /* Red Border */
+            background-color: rgba(255, 255, 255, 0.95);
+            color: #1e293b; 
+            border: 2px solid #ef4444; 
             border-radius: 6px;
             padding: 4px 8px; font-size: 13px; font-weight: 700;
             box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2);
@@ -63,6 +78,10 @@
         .leaflet-tooltip-bottom:before { border-bottom-color: #ef4444; }
         .leaflet-tooltip-top:before { border-top-color: #ef4444; }
 
+        /* Route Label */
+        .time-label-icon { background: transparent; border: none; }
+        .arrow-on-line { filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5)); }
+
         /* Layout */
         .mobile-view-active { display: flex !important; }
         .mobile-view-hidden { display: none !important; }
@@ -70,37 +89,24 @@
             .mobile-view-hidden { display: flex !important; }
             .desktop-flex { display: flex !important; }
             #bottomNav { display: none !important; }
+            #pwaInstallPrompt { display: none !important; } /* Hide install prompt on desktop */
         }
-        
-        /* Custom Scrollbar */
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
 
-        /* Image Zoom Cursor */
+        /* Animations */
         .zoomable-image { cursor: zoom-in; transition: transform 0.2s; }
         .zoomable-image:hover { transform: scale(1.02); }
+        .tab-btn.active { background-color: #f59e0b; color: white; border-color: #f59e0b; }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Active Tab Style */
-        .tab-btn.active {
-            background-color: #f59e0b; /* Amber-500 */
-            color: white;
-            border-color: #f59e0b;
-        }
-        
-        /* Fade In Animation */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in {
-            animation: fadeIn 0.3s ease-out forwards;
-        }
+        /* Safe Area for iPhone X+ */
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+        .pt-safe { padding-top: env(safe-area-inset-top); }
     </style>
 </head>
 <body class="bg-slate-50 h-screen flex flex-col overflow-hidden text-slate-800">
 
-    <!-- Image Modal (Lightbox) -->
+    <!-- Image Modal -->
     <div id="imageModal" class="fixed inset-0 z-[9999] bg-black/90 hidden flex items-center justify-center p-4 cursor-zoom-out opacity-0 transition-opacity duration-300" onclick="closeModal()">
         <div class="relative inline-block max-w-full max-h-full" onclick="event.stopPropagation()">
             <img id="modalImage" src="" class="max-h-[85vh] max-w-[95vw] rounded-lg shadow-2xl object-contain transform scale-95 transition-transform duration-300">
@@ -110,14 +116,12 @@
         </div>
     </div>
 
-    <!-- Exit Confirmation Modal -->
+    <!-- Exit Modal -->
     <div id="exitModal" class="fixed inset-0 z-[10000] bg-black/80 hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
         <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-xs transform scale-95 transition-transform duration-300 flex flex-col items-center text-center" onclick="event.stopPropagation()">
-            <div class="w-12 h-12 bg-red-100 text-red-500 rounded-full flex items-center justify-center mb-4">
-                <i data-lucide="log-out" class="w-6 h-6"></i>
-            </div>
+            <div class="w-12 h-12 bg-red-100 text-red-500 rounded-full flex items-center justify-center mb-4"><i data-lucide="log-out" class="w-6 h-6"></i></div>
             <h3 class="text-lg font-bold text-slate-800 mb-2">確定要離開嗎？</h3>
-            <p class="text-sm text-slate-500 mb-6">您即將退出行程地圖。</p>
+            <p class="text-sm text-slate-500 mb-6">您即將退出行程地圖 App。</p>
             <div class="flex gap-3 w-full">
                 <button onclick="cancelExit()" class="flex-1 py-2.5 bg-slate-100 text-slate-700 font-bold rounded-lg hover:bg-slate-200 transition-colors">取消</button>
                 <button onclick="confirmExit()" class="flex-1 py-2.5 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition-colors">確認離開</button>
@@ -126,25 +130,24 @@
     </div>
 
     <!-- Header -->
-    <header class="bg-slate-900 text-white p-3 shadow-md flex items-center justify-between z-30 shrink-0 pt-safe-top">
+    <header class="bg-slate-900 text-white p-3 shadow-md flex items-center justify-between z-30 shrink-0 pt-safe">
         <div class="flex items-center gap-3">
-            <div class="p-2 bg-amber-500 rounded-lg shadow-lg">
-                <i data-lucide="plane" class="text-white w-5 h-5"></i>
-            </div>
+            <div class="p-2 bg-amber-500 rounded-lg shadow-lg"><i data-lucide="plane" class="text-white w-5 h-5"></i></div>
             <div>
                 <h1 class="text-base font-bold leading-tight">VIP 峴港高爾夫奢華之旅</h1>
                 <p class="text-[10px] text-slate-400">2026/04/11 - 04/15</p>
             </div>
         </div>
+        <!-- Install PWA Button (Hidden if installed) -->
+        <button id="installBtn" class="hidden text-xs bg-white/20 hover:bg-white/30 px-2 py-1 rounded text-white flex items-center gap-1">
+            <i data-lucide="download" class="w-3 h-3"></i> 安裝 App
+        </button>
     </header>
 
     <!-- Main -->
     <div class="flex flex-1 relative overflow-hidden desktop-flex">
-        
         <!-- List View -->
         <aside id="listView" class="w-full lg:w-[420px] flex flex-col bg-white h-full border-r border-gray-200 mobile-view-active z-20 transition-all">
-            
-            <!-- Stacked Navigation Layout -->
             <div class="shrink-0 bg-slate-50 border-b border-gray-200 z-30 shadow-sm">
                 <!-- Map Overview Button (Full Width) -->
                 <div class="px-3 pt-3 pb-2">
@@ -152,26 +155,17 @@
                         <i data-lucide="map" class="w-4 h-4"></i> 📍 地圖總覽 (全行程)
                      </button>
                 </div>
-                
                 <!-- Day Tabs (Flex Row) -->
-                <div class="flex px-3 pb-3 gap-2" id="dayTabs">
-                    <!-- JS will inject buttons here -->
-                </div>
+                <div class="flex px-3 pb-3 gap-2" id="dayTabs"></div>
             </div>
-
-            <!-- Itinerary Content -->
             <div id="itineraryContent" class="flex-1 overflow-y-auto p-4 custom-scrollbar bg-white pb-20 lg:pb-4"></div>
         </aside>
 
         <!-- Map View -->
         <main id="mapView" class="w-full h-full bg-slate-200 relative mobile-view-hidden lg:block flex-1 z-10 transition-all">
             <div id="map" class="w-full h-full z-0"></div>
-            
-            <!-- Legend Button -->
-            <div class="absolute top-4 right-4 z-[500] flex flex-col items-end">
-                <button id="legendToggle" class="bg-white p-2.5 rounded-lg shadow-lg border border-gray-200 text-slate-600 mb-2 hover:bg-gray-50">
-                    <i data-lucide="info" class="w-5 h-5"></i>
-                </button>
+            <div class="absolute top-4 right-4 z-[500] flex flex-col items-end pt-safe">
+                <button id="legendToggle" class="bg-white p-2.5 rounded-lg shadow-lg border border-gray-200 text-slate-600 mb-2 hover:bg-gray-50"><i data-lucide="info" class="w-5 h-5"></i></button>
                 <div id="legendContent" class="hidden bg-white/95 backdrop-blur-sm p-4 rounded-lg shadow-xl border border-gray-200 text-xs w-44 animate-fade-in">
                     <div class="font-bold text-slate-700 mb-2 border-b pb-2">圖例說明</div>
                     <div class="space-y-2.5">
@@ -187,15 +181,22 @@
         </main>
     </div>
 
+    <!-- PWA Install Prompt (iOS Style) -->
+    <div id="pwaInstallPrompt" class="hidden fixed bottom-20 left-4 right-4 bg-slate-800 text-white p-4 rounded-xl shadow-2xl z-[9999] animate-fade-in flex flex-col gap-2 border border-slate-700">
+        <div class="flex justify-between items-start">
+            <h3 class="font-bold text-sm">📲 安裝到主畫面</h3>
+            <button onclick="document.getElementById('pwaInstallPrompt').classList.add('hidden')" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>
+        <p class="text-xs text-slate-300">點擊瀏覽器下方的 <i data-lucide="share" class="inline w-3 h-3"></i> 分享按鈕，然後選擇「加入主畫面」，即可像 App 一樣使用！</p>
+    </div>
+
     <!-- Mobile Nav -->
-    <nav id="bottomNav" class="lg:hidden bg-white border-t border-gray-200 flex justify-around items-center h-16 shrink-0 z-40 fixed bottom-0 w-full shadow-[0_-4px_10px_rgba(0,0,0,0.05)] pb-safe-bottom">
+    <nav id="bottomNav" class="lg:hidden bg-white border-t border-gray-200 flex justify-around items-center h-16 shrink-0 z-40 fixed bottom-0 w-full shadow-[0_-4px_10px_rgba(0,0,0,0.05)] pb-safe">
         <button id="navBtnList" class="flex flex-col items-center justify-center w-1/2 h-full text-amber-600 transition-colors" onclick="setMobileView('list')">
-            <i data-lucide="list" class="w-5 h-5 mb-1"></i>
-            <span class="text-xs font-bold mt-1">行程列表</span>
+            <i data-lucide="list" class="w-5 h-5 mb-1"></i><span class="text-xs font-bold mt-1">行程列表</span>
         </button>
         <button id="navBtnMap" class="flex flex-col items-center justify-center w-1/2 h-full text-slate-400 hover:text-slate-600 transition-colors" onclick="setMobileView('map')">
-            <i data-lucide="map" class="w-5 h-5 mb-1"></i>
-            <span class="text-xs font-bold mt-1">地圖模式</span>
+            <i data-lucide="map" class="w-5 h-5 mb-1"></i><span class="text-xs font-bold mt-1">地圖模式</span>
         </button>
     </nav>
 
@@ -221,7 +222,7 @@
             intercontinental: { 
                 lat: 16.120500, lng: 108.306160, name: "InterContinental Resort", type: "hotel",
                 image: "https://live.staticflickr.com/65535/54842483435_9297b91884_o.jpg", 
-                website: "https://www.danang.intercontinental.com/zh-hant/"
+                website: "https://www.danang.intercontinental.com/zh/"
             },
             madameLan: { 
                 lat: 16.081581, lng: 108.223346, name: "藍夫人越式餐廳", type: "food",
@@ -231,7 +232,7 @@
             laMaison: { 
                 lat: 16.120800, lng: 108.306500, name: "La Maison 1888", type: "food",
                 image: "https://www.veganfoodquest.com/wp-content/uploads/2015/11/InterCon-Danang-%C3%A2%E2%82%AC%E2%80%9C-La-Maison-18881.jpg", 
-                website: "https://www.danang.intercontinental.com/zh-hant/dining/la-maison-1888/"
+                website: "https://www.danang.intercontinental.com/zh/dining/la-maison-1888/"
             },
             banaHillsGolf: { 
                 lat: 16.017641, lng: 108.049361, name: "Ba Na Hills Golf Club", type: "golf",
@@ -344,7 +345,7 @@
                 desc: "悠閒早餐，登機前4小時退房，返回台北。",
                 route: [
                     { ...LOCATIONS.newWorld, time: "08:35", note: "退房 & 出發 (BR384)" },
-                    { ...LOCATIONS.airport, time: "09:35", note: "抵達機場 (12:35 起飛)" },
+                    { ...LOCATIONS.airport, time: "10:00", note: "抵達機場 (12:35 起飛)" },
                     { ...LOCATIONS.taoyuanAirportT2, time: "16:45", note: "抵達桃園機場2航廈 (飛行約 3小時10分)" }
                 ],
                 stay: null
@@ -375,9 +376,8 @@
 
         const createCustomIcon = (type) => L.divIcon({ className: 'custom-div-icon', html: `<div class="marker-pin bg-${type}"><div class="marker-icon-svg">${getIconHtml(type)}</div></div>`, iconSize: [40, 40], iconAnchor: [20, 40], popupAnchor: [0, -38] });
 
-        // Helper Functions (Ensured Global Scope)
+        // Helper Functions
         function deg2rad(deg) { return deg * (Math.PI/180); }
-
         function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
             var R = 6371; var dLat = deg2rad(lat2-lat1); var dLon = deg2rad(lon2-lon1);
             var a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon/2) * Math.sin(dLon/2);
@@ -415,17 +415,12 @@
             return `${mins} 分鐘`;
         }
 
-        function getGoogleMapsLink(route) {
-            if (!route || route.length < 2) return '#';
-            const origin = `${route[0].lat},${route[0].lng}`;
-            const destination = `${route[route.length-1].lat},${route[route.length-1].lng}`;
-            let waypoints = "";
-            if (route.length > 2) {
-                // Limit waypoints if necessary, but 5 days shouldn't hit limits for daily trips
-                const points = route.slice(1, -1).map(s => `${s.lat},${s.lng}`);
-                waypoints = "&waypoints=" + points.join('|');
-            }
-            return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${waypoints}&travelmode=driving`;
+        function getGoogleMapsDrivingLink(stop, nextStop) {
+            if (!nextStop) return '#';
+            const origin = `${stop.lat},${stop.lng}`;
+            const dest = `${nextStop.lat},${nextStop.lng}`;
+            // Use 'driving' mode
+            return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${dest}&travelmode=driving`;
         }
 
         async function fetchRouteData(p1, p2) {
@@ -441,7 +436,9 @@
                 
                 if (!res.ok) throw new Error('Network error');
                 const data = await res.json();
-                if (data.routes?.[0]) return { coords: data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]) };
+                if (data.routes && data.routes.length > 0) {
+                    return { coords: data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]) };
+                }
             } catch (e) { console.log("OSRM fail or timeout, using straight line"); }
             return null;
         }
@@ -459,8 +456,8 @@
 
         function renderDayTabs() {
             const container = document.getElementById('dayTabs');
-            const allTab = `<button onclick="switchDay('all')" id="tab-all" class="tab-btn flex-1 min-w-[100px] py-2 rounded-lg text-xs font-bold transition-all border shrink-0 bg-white text-slate-500 border-gray-300 hover:bg-slate-100 flex items-center justify-center gap-1 shadow-sm">📍 地圖總覽</button>`;
-            container.innerHTML = allTab + ITINERARY.map(item => `<button onclick="switchDay(${item.day})" id="tab-${item.day}" class="tab-btn flex-1 py-2 rounded-lg text-xs font-bold transition-all border shrink-0 ${item.day === selectedDayId ? 'bg-amber-500 text-white border-amber-500 shadow-md' : 'bg-white text-slate-500 border-gray-300'}">DAY ${item.day}</button>`).join('');
+            // NO overview button here as requested
+            container.innerHTML = ITINERARY.map(item => `<button onclick="switchDay(${item.day})" id="tab-${item.day}" class="tab-btn flex-1 py-2 rounded-lg text-xs font-bold transition-all border shrink-0 ${item.day === selectedDayId ? 'bg-amber-500 text-white border-amber-500 shadow-md' : 'bg-white text-slate-500 border-gray-300'}">DAY ${item.day}</button>`).join('');
         }
 
         function switchDay(day) {
@@ -514,10 +511,23 @@
                 modal.classList.add('hidden');
             }, 300);
         }
-
         function cancelExit() { document.getElementById('exitModal').classList.add('hidden'); }
         function confirmExit() { window.history.back(); window.close(); }
         window.addEventListener('popstate', () => { document.getElementById('exitModal').classList.remove('hidden'); });
+        
+        // PWA Install Prompt Logic (Simple Check)
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+            // Already installed
+        } else {
+            // Show prompt logic (simplified for this demo, usually requires beforeinstallprompt event)
+            if(/iPhone|iPad|iPod/.test(navigator.userAgent)) {
+                 document.getElementById('installBtn').classList.remove('hidden');
+                 document.getElementById('installBtn').onclick = () => {
+                     document.getElementById('pwaInstallPrompt').classList.remove('hidden');
+                 };
+            }
+        }
+
         window.history.pushState({app:true}, "","");
 
         function renderAllLocations() {
@@ -526,7 +536,7 @@
                 <div class="grid grid-cols-1 gap-3 pb-20 animate-fade-in">${Object.values(LOCATIONS).filter(loc => loc.lat < 20).map(loc => `
                         <div class="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-100 shadow-sm cursor-pointer hover:bg-slate-50 transition-colors" onclick="zoomToLocation(${loc.lat}, ${loc.lng})">
                              <div class="relative z-10 w-10 h-10 rounded-full border-2 border-white shadow-sm flex items-center justify-center shrink-0 bg-${loc.type === 'hotel' ? 'hotel' : loc.type === 'golf' ? 'golf' : loc.type === 'food' ? 'food' : loc.type === 'sight' ? 'sight' : 'transport'} text-white">${getIconHtml(loc.type)}</div>
-                            <div class="flex-1 min-w-0"><h4 class="font-bold text-slate-800 text-sm truncate">${loc.name}</h4><div class="flex gap-2 mt-1"><button class="text-[12px] text-white bg-blue-600 px-2 py-1 rounded-full shadow-sm" onclick="event.stopPropagation(); window.open('https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}')">地圖</button>${loc.website ? `<button class="text-[12px] text-white bg-emerald-600 px-2 py-1 rounded-full shadow-sm" onclick="event.stopPropagation(); window.open('${loc.website}')">官網</button>` : ''}</div></div>
+                            <div class="flex-1 min-w-0"><h4 class="font-bold text-slate-800 text-sm truncate">${loc.name}</h4><div class="flex gap-2 mt-1"><button class="text-[12px] text-white bg-blue-600 px-2 py-1 rounded-full shadow-sm" onclick="event.stopPropagation(); window.open('https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}')">定位</button>${loc.website ? `<button class="text-[12px] text-white bg-emerald-600 px-2 py-1 rounded-full shadow-sm" onclick="event.stopPropagation(); window.open('${loc.website}')">官網</button>` : ''}</div></div>
                             <img src="${loc.image}" class="w-12 h-12 rounded object-cover bg-gray-200 shadow-sm" onclick="openModal(this.src); event.stopPropagation();">
                         </div>`).join('')}</div>`;
         }
@@ -534,32 +544,8 @@
         function renderItinerary(day) {
             const data = ITINERARY.find(d => d.day === day);
             
-            // Build the google maps button HTML first
-            const googleMapBtn = `
-                <div class="mt-4 animate-fade-in mb-6">
-                    <button onclick="window.open('${getGoogleMapsLink(data.route)}')" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2 transform active:scale-95">
-                        <i data-lucide="map" class="w-5 h-5"></i> 
-                        開啟 Google Maps 完整導航
-                    </button>
-                    <p class="text-[10px] text-slate-400 text-center mt-2 flex items-center justify-center gap-1">
-                        <i data-lucide="info" class="w-3 h-3"></i> 自動帶入當日所有行程點
-                    </p>
-                </div>
-            `;
-
             document.getElementById('itineraryContent').innerHTML = `
-                <div class="mb-4 animate-fade-in">
-                    <div class="flex items-center flex-wrap gap-2 mb-1">
-                        <span class="px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-bold rounded">DAY ${data.day}</span>
-                        <span class="text-slate-400 text-xs font-medium">${data.date}</span>
-                        <span class="text-blue-600 text-xs font-bold border border-blue-200 bg-blue-50 px-2 py-0.5 rounded-full">${data.weather}</span>
-                    </div>
-                    <h2 class="text-lg font-bold text-slate-800 mb-1 leading-tight">${data.title}</h2>
-                    <p class="text-xs text-slate-600 italic border-l-2 border-amber-400 pl-2 bg-amber-50 py-1.5 rounded-r">${data.desc}</p>
-                </div>
-
-                ${googleMapBtn}
-
+                <div class="mb-4 animate-fade-in"><div class="flex items-center flex-wrap gap-2 mb-1"><span class="px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-bold rounded">DAY ${data.day}</span><span class="text-slate-400 text-xs font-medium">${data.date}</span><span class="text-blue-600 text-xs font-bold border border-blue-200 bg-blue-50 px-2 py-0.5 rounded-full">${data.weather}</span></div><h2 class="text-lg font-bold text-slate-800 mb-1 leading-tight">${data.title}</h2><p class="text-xs text-slate-600 italic border-l-2 border-amber-400 pl-2 bg-amber-50 py-1.5 rounded-r">${data.desc}</p></div>
                 <div class="relative space-y-4 pl-1 animate-fade-in"><div class="absolute left-[20px] top-2 bottom-4 w-[2px] bg-slate-200"></div>
                     ${data.route.map((stop, idx) => {
                         let connectorHtml = '';
@@ -570,59 +556,47 @@
                             connectorHtml = `<div class="flex flex-col items-center flex-1 w-full my-1"><div class="w-0.5 h-2 bg-slate-200 shrink-0"></div><span class="bg-white border-2 border-red-500 text-sm text-red-600 font-bold px-2 rounded-full z-10 leading-none py-1 whitespace-nowrap" id="time-${day.day}-${idx}">${defaultTime}</span><div class="w-0.5 h-full bg-slate-200"></div></div>`;
                         }
 
+                        // Determine map button behavior
+                        let mapBtnHtml = '';
+                        if (idx < data.route.length - 1) {
+                             const nextStop = data.route[idx+1];
+                             const distKm = getDistanceFromLatLonInKm(stop.lat, stop.lng, nextStop.lat, nextStop.lng);
+                             if (distKm > 500) {
+                                  mapBtnHtml = `<button class="inline-flex items-center text-sm text-white bg-blue-600 px-3 py-1.5 rounded-full shadow-sm active:scale-95 transition-transform" onclick="event.stopPropagation(); window.open('https://www.google.com/maps/dir/?api=1&origin=${stop.lat},${stop.lng}&destination=${nextStop.lat},${nextStop.lng}&travelmode=transit')"><i data-lucide="plane" class="w-3.5 h-3.5 mr-1"></i> 飛航路線</button>`;
+                             } else {
+                                  mapBtnHtml = `<button class="inline-flex items-center text-sm text-white bg-blue-600 px-3 py-1.5 rounded-full shadow-sm active:scale-95 transition-transform" onclick="event.stopPropagation(); window.open('${getGoogleMapsDrivingLink(stop, nextStop)}')"><i data-lucide="map" class="w-3.5 h-3.5 mr-1"></i> 路徑導航</button>`;
+                             }
+                        } else {
+                             // Last stop: Locate
+                             mapBtnHtml = `<button class="inline-flex items-center text-sm text-white bg-blue-600 px-3 py-1.5 rounded-full shadow-sm active:scale-95 transition-transform" onclick="event.stopPropagation(); window.open('https://www.google.com/maps/search/?api=1&query=${stop.lat},${stop.lng}')"><i data-lucide="map-pin" class="w-3.5 h-3.5 mr-1"></i> 定位</button>`;
+                        }
+
+                        const webBtn = stop.website ? `<button class="inline-flex items-center text-sm text-white bg-emerald-600 px-3 py-1.5 rounded-full shadow-sm active:scale-95 transition-transform" onclick="event.stopPropagation(); window.open('${stop.website}')"><i data-lucide="globe" class="w-3.5 h-3.5 mr-1"></i> 官網</button>` : '';
+                        const bookBtn = stop.yardageBook ? `<button class="inline-flex items-center text-sm text-white bg-orange-600 px-3 py-1.5 rounded-full shadow-sm active:scale-95 transition-transform" onclick="event.stopPropagation(); window.open('${stop.yardageBook}')"><i data-lucide="book-open" class="w-3.5 h-3.5 mr-1"></i> 碼數本</button>` : '';
+                        const appBtn = stop.courseApp ? `<button class="inline-flex items-center text-sm text-white bg-violet-600 px-3 py-1.5 rounded-full shadow-sm active:scale-95 transition-transform" onclick="event.stopPropagation(); window.open('${stop.courseApp}')"><i data-lucide="map" class="w-3.5 h-3.5 mr-1"></i> 球道攻略</button>` : '';
+
                         return `
                         <div class="relative flex gap-3 group cursor-pointer active:bg-gray-100 p-2 rounded-lg transition-colors border border-transparent hover:border-gray-200" onclick="zoomToLocation(${stop.lat}, ${stop.lng})">
-                            
-                            <div class="flex flex-col items-end pt-1 w-12 shrink-0">
-                                <span class="text-sm font-bold text-slate-700 font-mono leading-none">${stop.time}</span>
-                            </div>
-
-                            <div class="flex flex-col items-center gap-1 w-8 shrink-0">
-                                <div class="relative z-10 w-8 h-8 rounded-full border-2 border-white shadow-sm flex items-center justify-center shrink-0 bg-${stop.type} text-white">
-                                    ${getIconHtml(stop.type)}
-                                </div>
-                                ${connectorHtml}
-                            </div>
-
+                            <div class="flex flex-col items-end pt-1 w-12 shrink-0"><span class="text-sm font-bold text-slate-700 font-mono leading-none">${stop.time}</span></div>
+                            <div class="flex flex-col items-center gap-1 w-8 shrink-0"><div class="relative z-10 w-8 h-8 rounded-full border-2 border-white shadow-sm flex items-center justify-center shrink-0 bg-${stop.type} text-white">${getIconHtml(stop.type)}</div>${connectorHtml}</div>
                             <div class="flex-1 min-w-0">
                                 <div class="flex justify-between items-start">
-                                    <div>
-                                        <div class="flex items-center gap-2 mb-0.5">
-                                            ${stop.note.includes("班機") || stop.note.includes("退房") ? `<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-600 flex items-center gap-1">⚠️ 重要</span>` : ''}
-                                        </div>
-                                        <h3 class="font-bold text-slate-800 text-sm leading-tight mb-1">${stop.name}</h3>
-                                    </div>
+                                    <div><div class="flex items-center gap-2 mb-0.5">${stop.note.includes("班機") || stop.note.includes("退房") ? `<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-600 flex items-center gap-1">⚠️ 重要</span>` : ''}</div><h3 class="font-bold text-slate-800 text-sm leading-tight mb-1">${stop.name}</h3></div>
                                     <img src="${stop.image}" class="w-16 h-12 object-cover rounded-md shadow-sm border border-gray-100 shrink-0 ml-2 bg-gray-100 zoomable-image" loading="lazy" alt="${stop.name}" onerror="this.src='https://via.placeholder.com/150'" onclick="openModal(this.src); event.stopPropagation();">
                                 </div>
                                 <p class="text-[11px] text-slate-500 mt-0.5 line-clamp-2">${stop.note}</p>
-                                <div class="flex gap-2 mt-2">
-                                    <button class="inline-flex items-center text-sm text-white bg-blue-600 px-3 py-1.5 rounded-full shadow-sm active:scale-95 transition-transform" onclick="event.stopPropagation(); window.open('https://www.google.com/maps/search/?api=1&query=${stop.lat},${stop.lng}')">
-                                        <i data-lucide="map" class="w-3.5 h-3.5 mr-1"></i> 地圖
-                                    </button>
-                                    ${stop.website ? `<button class="inline-flex items-center text-sm text-white bg-emerald-600 px-3 py-1.5 rounded-full shadow-sm active:scale-95 transition-transform" onclick="event.stopPropagation(); window.open('${stop.website}')"><i data-lucide="globe" class="w-3.5 h-3.5 mr-1"></i> 官網</button>` : ''}
-                                    ${stop.yardageBook ? `<button class="inline-flex items-center text-sm text-white bg-orange-600 px-3 py-1.5 rounded-full shadow-sm active:scale-95 transition-transform" onclick="event.stopPropagation(); window.open('${stop.yardageBook}')"><i data-lucide="book-open" class="w-3.5 h-3.5 mr-1"></i> 碼數本</button>` : ''}
-                                    ${stop.courseApp ? `<button class="inline-flex items-center text-sm text-white bg-violet-600 px-3 py-1.5 rounded-full shadow-sm active:scale-95 transition-transform" onclick="event.stopPropagation(); window.open('${stop.courseApp}')"><i data-lucide="map" class="w-3.5 h-3.5 mr-1"></i> 球道攻略</button>` : ''}
-                                </div>
+                                <div class="flex gap-2 mt-2 flex-wrap">${mapBtnHtml}${webBtn}${bookBtn}${appBtn}</div>
                             </div>
-                        </div>
-                    `;
+                        </div>`;
                     }).join('')}
-                    ${data.stay ? `
-                    <div class="mt-4 pt-4 border-t border-gray-100 ml-14">
-                        <div class="bg-slate-800 text-white p-3 rounded-xl flex items-center gap-3 shadow-lg">
-                            <div class="p-1.5 bg-white/10 rounded-full"><i data-lucide="bed" class="w-4 h-4"></i></div>
-                            <div>
-                                <div class="text-[9px] text-slate-400 uppercase tracking-widest mb-0.5">本日住宿</div>
-                                <div class="font-bold text-xs">${data.stay.name}</div>
-                            </div>
-                        </div>
-                    </div>` : ''}
+                    ${data.stay ? `<div class="mt-4 pt-4 border-t border-gray-100 ml-14"><div class="bg-slate-800 text-white p-3 rounded-xl flex items-center gap-3 shadow-lg"><div class="p-1.5 bg-white/10 rounded-full"><i data-lucide="bed" class="w-4 h-4"></i></div><div><div class="text-[9px] text-slate-400 uppercase tracking-widest mb-0.5">本日住宿</div><div class="font-bold text-xs">${data.stay.name}</div></div></div></div>` : ''}
                 </div>`;
             lucide.createIcons();
             updateMap(data);
         }
 
         async function updateMap(dayData) {
+            const renderId = ++currentRenderId;
             markersLayer.clearLayers(); polylineLayer.clearLayers(); labelsLayer.clearLayers();
             const latLngs = [];
             const fitBoundsLatLngs = []; 
@@ -637,7 +611,7 @@
                                     <div class="px-2 pb-2">
                                         <h3 class="font-bold text-sm mb-2 text-slate-800">${loc.name}</h3>
                                         <div class="flex gap-2">
-                                            <a href="https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}" target="_blank" class="flex-1 text-center bg-blue-600 text-white text-sm font-bold py-2 rounded shadow hover:bg-blue-700 transition-colors">地圖</a>
+                                            <a href="https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}" target="_blank" class="flex-1 text-center bg-blue-600 text-white text-sm font-bold py-2 rounded shadow hover:bg-blue-700 transition-colors">定位</a>
                                             ${loc.website ? `<a href="${loc.website}" target="_blank" class="flex-1 text-center bg-emerald-600 text-white text-sm font-bold py-2 rounded shadow hover:bg-emerald-700 transition-colors">官網</a>` : ''}
                                         </div>
                                     </div>
@@ -654,7 +628,7 @@
                 });
                 currentBounds = fitBoundsLatLngs;
             } else {
-                dayData.route.forEach(stop => {
+                dayData.route.forEach((stop, idx) => {
                     const latLng = [stop.lat, stop.lng];
                     latLngs.push(latLng);
                     if (stop.lat < 20) fitBoundsLatLngs.push(latLng);
@@ -666,6 +640,20 @@
                     const isDay2AndNewWorld = dayData.day === 2 && stop.name === LOCATIONS.newWorld.name; 
                     const isDay4AndInterCon = dayData.day === 4 && stop.name === LOCATIONS.intercontinental.name; 
 
+                    // Map Popup Buttons
+                    let mapBtnHtml = '';
+                    if (idx < dayData.route.length - 1) {
+                        const nextStop = dayData.route[idx+1];
+                        const distKm = getDistanceFromLatLonInKm(stop.lat, stop.lng, nextStop.lat, nextStop.lng);
+                        if (distKm > 500) {
+                            mapBtnHtml = `<a href="https://www.google.com/maps/dir/?api=1&origin=${stop.lat},${stop.lng}&destination=${nextStop.lat},${nextStop.lng}&travelmode=transit" target="_blank" class="flex-1 text-center bg-blue-600 text-white text-sm font-bold py-2 rounded shadow hover:bg-blue-700 transition-colors">飛航路線</a>`;
+                        } else {
+                            mapBtnHtml = `<a href="${getGoogleMapsDrivingLink(stop, nextStop)}" target="_blank" class="flex-1 text-center bg-blue-600 text-white text-sm font-bold py-2 rounded shadow hover:bg-blue-700 transition-colors">路徑導航</a>`;
+                        }
+                    } else {
+                        mapBtnHtml = `<a href="https://www.google.com/maps/search/?api=1&query=${stop.lat},${stop.lng}" target="_blank" class="flex-1 text-center bg-blue-600 text-white text-sm font-bold py-2 rounded shadow hover:bg-blue-700 transition-colors">定位</a>`;
+                    }
+
                     L.marker(latLng, { icon: createCustomIcon(stop.type) })
                         .bindPopup(`
                             <div class="font-sans w-[240px]">
@@ -674,7 +662,7 @@
                                     <div class="text-[10px] font-bold text-slate-500 mb-1">${stop.time}</div>
                                     <h3 class="font-bold text-sm mb-2 text-slate-800">${stop.name}</h3>
                                     <div class="flex gap-2 flex-wrap">
-                                        <a href="https://www.google.com/maps/search/?api=1&query=${stop.lat},${stop.lng}" target="_blank" class="flex-1 text-center bg-blue-600 text-white text-sm font-bold py-2 rounded shadow hover:bg-blue-700 transition-colors">地圖</a>
+                                        ${mapBtnHtml}
                                         ${stop.website ? `<a href="${stop.website}" target="_blank" class="flex-1 text-center bg-emerald-600 text-white text-sm font-bold py-2 rounded shadow hover:bg-emerald-700 transition-colors">官網</a>` : ''}
                                         ${stop.yardageBook ? `<a href="${stop.yardageBook}" target="_blank" class="flex-1 text-center bg-orange-600 text-white text-sm font-bold py-2 rounded shadow hover:bg-orange-700 transition-colors">碼數本</a>` : ''}
                                         ${stop.courseApp ? `<a href="${stop.courseApp}" target="_blank" class="flex-1 text-center bg-violet-600 text-white text-sm font-bold py-2 rounded shadow hover:bg-violet-700 transition-colors">球道攻略</a>` : ''}
@@ -704,6 +692,7 @@
                     let routePoints = null;
                     if (!isFlight) {
                         const osrmData = await fetchRouteData(p1, p2);
+                        if (renderId !== currentRenderId) return; 
                         if (osrmData) routePoints = osrmData.coords;
                     }
                     if (!routePoints) routePoints = [p1, p2];
